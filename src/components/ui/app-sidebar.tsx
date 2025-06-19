@@ -26,6 +26,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
+//Rutas
+
+
 const data = {
   user: {
     name: "Óscar Arias",
@@ -35,13 +38,13 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/home",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
           title: "History",
-          url: "#",
+          url: "",
         },
         {
           title: "Starred",
@@ -55,7 +58,7 @@ const data = {
     },
     {
       title: "Gestión de usuarios",
-      url: "#",
+      url: "/UserManagement",
       icon: Bot,
       items: [
         {
@@ -74,7 +77,7 @@ const data = {
     },
     {
       title: "Registro de proyectos",
-      url: "#",
+      url: "/ProyectManagement",
       icon: BookOpen,
       items: [
         {

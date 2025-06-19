@@ -9,24 +9,17 @@ export const description = "A sidebar with a header and a search form.";
 
 export default function HomePage() {
   return (
-    <div className="[--header-height:calc(--spacing(14))]">
-      <SidebarProvider className="flex flex-col">
-        <SiteHeader />
-        <div className="flex flex-1">
-          <AppSidebar />
-          <SidebarInset>
-            <SearchForm className="w-full sm:mr-auto sm:w-auto p-4" />
-            <div className="flex flex-1 flex-col gap-4 pr-4">
-              <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                <div className="bg-muted/50 aspect-video rounded-xl" />
-                <div className="bg-muted/50 aspect-video rounded-xl" />
-                <div className="bg-muted/50 aspect-video rounded-xl" />
-              </div>
-              <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min" />
-            </div>
-          </SidebarInset>
+    <div className="[--header-height:calc(--spacing(14))] p-4">
+      <SearchForm className="w-full sm:mr-auto sm:w-auto p-4" />
+      <div className="flex flex-1 flex-col gap-4 pr-4">
+        {/* <h1>jdhsfjds</h1> */}
+        <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+          <div className="bg-muted/50 aspect-video rounded-xl" />
+          <div className="bg-muted/50 aspect-video rounded-xl" />
+          <div className="bg-muted/50 aspect-video rounded-xl" />
         </div>
-      </SidebarProvider>
+        <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min" />
+      </div>
     </div>
   );
 }
