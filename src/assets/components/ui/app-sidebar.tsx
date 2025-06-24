@@ -13,9 +13,9 @@ import {
   SquareTerminal,
 } from "lucide-react"
 
-import { NavMain } from "@/components/ui/nav-main"
-import { NavSecondary } from "@/components/ui/nav-secondary"
-import { NavUser } from "@/components/ui/nav-user"
+import { NavMain } from "@/assets/components/ui/nav-main"
+import { NavSecondary } from "@/assets/components/ui/nav-secondary"
+import { NavUser } from "@/assets/components/ui/nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +24,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/assets/components/ui/sidebar"
 
 //Rutas
 

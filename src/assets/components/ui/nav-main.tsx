@@ -2,7 +2,7 @@
 
 import { type LucideIcon } from "lucide-react";
 
-import { Collapsible } from "@/components/ui/collapsible";
+import { Collapsible } from "@/assets/components/ui/collapsible";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSubItem,
-} from "@/components/ui/sidebar";
+} from "@/assets/components/ui/sidebar";
 
 export function NavMain({
   items,

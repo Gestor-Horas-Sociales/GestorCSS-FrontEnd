@@ -1,11 +1,12 @@
+/* eslint-disable no-empty-pattern */
 "use client";
 
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/assets/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/assets/components/ui/radio-group";
+import { Button } from "@/assets/components/ui/button";
 import {
   Form,
   FormControl,
@@ -14,9 +15,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import ComboboxDemo from "@/components/ExtraComponents/ComboBox";
+} from "@/assets/components/ui/form";
+import { Input } from "@/assets/components/ui/input";
+import ComboboxDemo from "@/assets/components/ExtraComponents/CareerComboBox";
+import YearComboBox from "@/assets/components/ExtraComponents/YearComboBox";
 
 const formSchema = z.object({
   username: z.string().min(2, {
@@ -40,9 +42,9 @@ export function UserManagement() {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-8 p-6 bg-white rounded-lg shadow-md"
+        className="space-y-8 p-4 sm:p-6 rounded-lg"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <FormField
             control={form.control}
             name="username"
@@ -82,33 +84,80 @@ export function UserManagement() {
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="option-three" id="option-three" />
-                <Label htmlFor="option-two">Otro</Label>
+                <Label htmlFor="option-three">Otro</Label>
               </div>
             </RadioGroup>
           </FormItem>
+          <div className="grid grid-cols-1 gap-4">
+            <FormField
+              control={form.control}
+              name="username" 
+              render={({  }) => (
+                <FormItem>
+                  <FormLabel>Carrera</FormLabel>
+                  <FormControl>
+                    <ComboboxDemo />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ }) => (
+                <FormItem>
+                  <FormLabel>Nivel de carrera</FormLabel>
+                  <FormControl>
+                    <YearComboBox />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <FormField
             control={form.control}
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Carrera</FormLabel>
+                <FormLabel>Departamento</FormLabel>
                 <FormControl>
-                  <ComboboxDemo />
+                  <Input placeholder="Seleccione departamento" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Municipio</FormLabel>
+                <FormControl>
+                  <Input placeholder="Seleccione municipio" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-        <FormDescription className="text-gray-500">
-          This is your public display name.
-        </FormDescription>
-        <Button
-          type="submit"
-          className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white"
-        >
-          Submit
-        </Button>
+        <FormDescription className="text-gray-500"></FormDescription>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button
+            type="submit"
+            className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            Agregar estudiante
+          </Button>
+          <Button
+            type="submit"
+            className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white"
+          >
+            Cargar desde archivo
+          </Button>
+        </div>
       </form>
     </Form>
   );
