@@ -1,7 +1,7 @@
 import { GalleryVerticalEnd } from "lucide-react"
 import { LoginForm } from "@/assets/components/ui/login-form"
 import { useMsal } from "@azure/msal-react"
-import { loginRequest } from "@/authConfig"
+import { loginRequest } from "@/auth/authConfig"
 
 import LoginImage from "../../../assets/bgLogInImage.jpg"
 

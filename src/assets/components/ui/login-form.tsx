@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/assets/components/ui/button";
 import { Input } from "@/assets/components/ui/input";
 import { Label } from "@/assets/components/ui/label";
+import { useManualAuth } from "@/auth/authContext";
 
 export function LoginForm({
   className,
@@ -12,25 +13,17 @@ export function LoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { loginManual } = useManualAuth();
 
   function logInValidations(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault(); // Prevenir el submit del formulario por defecto
+    e.preventDefault();
 
-    if (!email || !password) {
-      alert("Por favor, complete todos los campos.");
-      return;
-    }
-
-    const validCredentials = {
-      email: "admin@uca.edu.sv",
-      password: "12345678",
-    };
-
-    if (email === validCredentials.email && password === validCredentials.password) {
+    if (email === "admin@uca.edu.sv" && password === "12345678") {
       alert("Inicio de sesión exitoso.");
-      navigate("/home"); // Redirige a /home
+      loginManual(); // 👈 ahora se marca como logueado manualmente
+      navigate("/home");
     } else {
-      alert("Credenciales inválidas. Inténtelo de nuevo.");
+      alert("Credenciales inválidas.");
     }
   }
 
