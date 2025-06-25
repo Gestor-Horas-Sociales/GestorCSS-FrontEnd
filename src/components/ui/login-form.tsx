@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Button } from "@/assets/components/ui/button";
-import { Input } from "@/assets/components/ui/input";
-import { Label } from "@/assets/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useManualAuth } from "@/auth/authContext";
 
 export function LoginForm({

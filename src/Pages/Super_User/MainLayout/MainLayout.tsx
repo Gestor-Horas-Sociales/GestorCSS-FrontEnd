@@ -1,9 +1,9 @@
 // src/components/layout/MainLayout.tsx
 import { Outlet } from "react-router-dom";
-import { SidebarProvider } from "@/assets/components/ui/sidebar";
-import { SiteHeader } from "@/assets/components/ui/site-header";
-import { AppSidebar } from "@/assets/components/ui/app-sidebar";
-import { SidebarInset } from "@/assets/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { SiteHeader } from "@/components/ui/site-header";
+import { AppSidebar } from "@/components/ui/app-sidebar";
+import { SidebarInset } from "@/components/ui/sidebar";
 
 export default function MainLayout() {
   return (

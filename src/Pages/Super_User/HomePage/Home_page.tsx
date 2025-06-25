@@ -1,7 +1,7 @@
-import { AppSidebar } from "@/assets/components/ui/app-sidebar";
-import { SiteHeader } from "@/assets/components/ui/site-header";
-import { SidebarInset, SidebarProvider } from "@/assets/components/ui/sidebar";
-import { SearchForm } from "@/assets/components/ui/search-form";
+import { AppSidebar } from "@/components/ui/app-sidebar";
+import { SiteHeader } from "@/components/ui/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SearchForm } from "@/components/ui/search-form";
 
 export const iframeHeight = "800px";
 

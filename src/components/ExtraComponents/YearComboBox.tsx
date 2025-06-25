@@ -4,7 +4,7 @@ import * as React from "react"
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/assets/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
@@ -12,12 +12,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/assets/components/ui/command"
+} from "@/components/ui/command"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/assets/components/ui/popover"
+} from "@/components/ui/popover"
 
 const frameworks = [
   {
@@ -42,7 +42,7 @@ const frameworks = [
   },
 ]
 
-export default function CareerComboBox() {
+export default function YearComboBox() {
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState("")
 
@@ -57,7 +57,7 @@ export default function CareerComboBox() {
         >
           {value
             ? frameworks.find((framework) => framework.value === value)?.label
-            : "Seleccione Carrera"}
+            : "Año academico"}
           <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>

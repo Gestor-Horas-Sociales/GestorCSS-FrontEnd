@@ -8,7 +8,7 @@ import HomePage from "@/Pages/Super_User/HomePage/Home_page";
 import LoginPage from "@/Pages/Super_User/LogIn/LogIn_page";
 import { UserManagement } from "@/Pages/Super_User/UserManagement/UserManagementPage";
 import { ProyectManagementPage } from "./Pages/Super_User/ProyectManagement/ProyectManagementPage";
-import { ThemeProvider } from "@/assets/components/ThemeProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 function ProtectedRoutes() {
   return (

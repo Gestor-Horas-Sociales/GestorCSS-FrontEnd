@@ -6,11 +6,12 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
-} from "@/assets/components/ui/breadcrumb"
-import { Button } from "@/assets/components/ui/button"
-import { Separator } from "@/assets/components/ui/separator"
-import { useSidebar } from "@/assets/components/ui/sidebar"
+} from "@/components/ui/breadcrumb"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { useSidebar } from "@/components/ui/sidebar"
 import { ModeToggle } from "../ModeToggle"
+import { LogoutButton } from "../ExtraComponents/LogOutButton"
 
 export function SiteHeader() {
   const { toggleSidebar } = useSidebar()
@@ -37,6 +38,7 @@ export function SiteHeader() {
           </BreadcrumbList>
         </Breadcrumb>
         <ModeToggle/>
+        <LogoutButton/>
       </div>
     </header>
   )
