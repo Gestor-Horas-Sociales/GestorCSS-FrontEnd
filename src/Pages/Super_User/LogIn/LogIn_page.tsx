@@ -10,7 +10,14 @@ export default function LoginPage() {
 
   const handleMicrosoftLogin = async () => {
     try {
-      await instance.loginPopup(loginRequest)
+      const response = await instance.loginPopup(loginRequest)
+      const account = response.account;
+
+      const tokenResponse = await instance.acquireTokenSilent({
+        ...loginRequest,
+        account: account
+      })
+      console.log("Inicio de sesión exitoso con Microsoft:", tokenResponse)
     } catch (error) {
       console.error("Error al iniciar sesión con Microsoft:", error)
     }

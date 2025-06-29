@@ -1,11 +1,10 @@
 // src/authConfig.ts
-import type { Configuration } from "@azure/msal-browser";
 
-export const msalConfig: Configuration = {
+export const msalConfig = {
   auth: {
-    clientId: "4e214bdf-180f-4933-992d-dafa93682346", // Pega el Application (client) ID aquí
-    authority: "https://login.microsoftonline.com/common",
-    //     redirectUri: "/", // Asegúrate que coincida con lo registrado en Azure
+    clientId: import.meta.env.VITE_AZURE_CLIENT_ID, // ID de la aplicación registrada en Azure
+    authority: import.meta.env.VITE_AUTHORITY_URL,
+    redirectUri: import.meta.env.VITE_REDIRECT_URI, // o según tu app
   },
   cache: {
     cacheLocation: "localStorage",
@@ -14,5 +13,5 @@ export const msalConfig: Configuration = {
 };
 
 export const loginRequest = {
-  scopes: ["user.read"],
+  scopes: ["User.Read", "openid", "profile", "email"],
 };
