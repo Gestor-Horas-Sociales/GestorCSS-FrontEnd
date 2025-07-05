@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
-import { useManualAuth } from "@/auth/authContext";
+import { useAuth } from "@/context/authContext"; // ✅ ruta y nombre correctos
 
 // Layout y Pages
 import MainLayout from "@/Pages/Super_User/MainLayout/MainLayout";
@@ -25,9 +25,9 @@ function ProtectedRoutes() {
 
 function App() {
   const { accounts } = useMsal();
-  const { isManualAuth } = useManualAuth();
+  const { isAuthenticated } = useAuth(); // ✅ reemplazo de isManualAuth
 
-  const isLoggedIn = accounts.length > 0 || isManualAuth;
+  const isLoggedIn = accounts.length > 0 || isAuthenticated;
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">

@@ -1,10 +1,9 @@
-// src/authConfig.ts
-
+// src/auth/authConfig.ts
 export const msalConfig = {
   auth: {
-    clientId: import.meta.env.VITE_AZURE_CLIENT_ID, // ID de la aplicación registrada en Azure
+    clientId: import.meta.env.VITE_AZURE_CLIENT_ID,
     authority: import.meta.env.VITE_AUTHORITY_URL,
-    redirectUri: import.meta.env.VITE_REDIRECT_URI, // o según tu app
+    redirectUri: import.meta.env.VITE_REDIRECT_URI,
   },
   cache: {
     cacheLocation: "localStorage",
@@ -13,5 +12,5 @@ export const msalConfig = {
 };
 
 export const loginRequest = {
-  scopes: ["User.Read", "openid", "profile", "email"],
+  scopes: ["User.Read", "openid", "profile", "email"], // puedes agregar scopes de tu API si la protegés con Azure
 };

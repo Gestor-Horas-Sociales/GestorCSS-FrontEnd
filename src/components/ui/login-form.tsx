@@ -1,71 +1,70 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useManualAuth } from "@/auth/authContext";
+import { useMsal } from "@azure/msal-react";
+import { loginRequest } from "@/auth/authConfig";
+import { useAuth } from "@/context/authContext";
+import api from "@/api/axios";
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentProps<"form">) {
+export function LoginForm() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState(""); // opcional si solo usás MSAL
+  const { instance } = useMsal();
+  const { login } = useAuth();
   const navigate = useNavigate();
-  const { loginManual } = useManualAuth();
 
-  function logInValidations(e: React.FormEvent<HTMLFormElement>) {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (email === "admin@uca.edu.sv" && password === "12345678") {
-      alert("Inicio de sesión exitoso.");
-      loginManual(); // 👈 ahora se marca como logueado manualmente
+    try {
+      const loginResponse = await instance.loginPopup(loginRequest);
+      const tokenResponse = await instance.acquireTokenSilent({
+        ...loginRequest,
+        account: loginResponse.account,
+      });
+
+      const accessToken = tokenResponse.accessToken;
+      localStorage.setItem("token", accessToken); // para axios
+
+      // Si querés validar con tu API backend (opcional)
+      await api.post(
+        "/auth/validate",
+        { email },
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      login(); // cambia estado en el contexto
       navigate("/home");
-    } else {
-      alert("Credenciales inválidas.");
+    } catch (err) {
+      console.error("Error al iniciar sesión con MSAL:", err);
+      alert("No se pudo iniciar sesión.");
     }
-  }
+  };
 
   return (
-    <form
-      onSubmit={logInValidations}
-      className={cn("flex flex-col gap-6", className)}
-      {...props}
-    >
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold">
-          Portal Gestor de proyectos de horas sociales
-        </h1>
-        <h3>Facultad de ingeniería y arquitectura</h3>
-      </div>
-      <div className="grid gap-6">
-        <div className="grid gap-3">
-          <Label htmlFor="email">Usuario</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="m@example.com"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div className="grid gap-3">
-          <Label htmlFor="password">Contraseña</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="********"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <Button type="submit" className="w-full">
-          Login
-        </Button>
-      </div>
+    <form onSubmit={handleLogin} className="flex flex-col gap-4">
+      {/* otros inputs */}
+
+      <button
+        type="submit"
+        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+      >
+        {/* Logo Microsoft SVG */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <rect x="1" y="1" width="10" height="10" fill="#F35325" />
+          <rect x="13" y="1" width="10" height="10" fill="#81BC06" />
+          <rect x="1" y="13" width="10" height="10" fill="#05A6F0" />
+          <rect x="13" y="13" width="10" height="10" fill="#FFBA08" />
+        </svg>
+        Iniciar sesión con Microsoft
+      </button>
     </form>
   );
 }

@@ -7,7 +7,7 @@ import App from './App.tsx'
 import { MsalProvider } from '@azure/msal-react'
 import { PublicClientApplication } from '@azure/msal-browser'
 import { msalConfig } from './auth/authConfig.ts'
-import { AuthProvider } from "./auth/authContext.tsx"; // <--- nuevo
+import { AuthProvider } from "./context/authContext.tsx"; // <--- nuevo
 
 const msalInstance = new PublicClientApplication(msalConfig);
 
