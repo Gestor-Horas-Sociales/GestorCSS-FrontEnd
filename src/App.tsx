@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 import { useMsal } from "@azure/msal-react";
-import { useAuth } from "@/context/authContext"; // ✅ ruta y nombre correctos
+import { useAuthStore } from "./store/authStore";
 
 // Layout y Pages
 import MainLayout from "@/Pages/Super_User/MainLayout/MainLayout";
@@ -25,7 +26,11 @@ function ProtectedRoutes() {
 
 function App() {
   const { accounts } = useMsal();
-  const { isAuthenticated } = useAuth(); // ✅ reemplazo de isManualAuth
+  const { isAuthenticated, initializeAuth } = useAuthStore();
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   const isLoggedIn = accounts.length > 0 || isAuthenticated;
 
