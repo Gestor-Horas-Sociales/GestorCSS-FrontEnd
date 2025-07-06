@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/auth/authConfig";
@@ -6,8 +5,6 @@ import { useAuth } from "@/context/authContext";
 import api from "@/api/axios";
 
 export function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState(""); // opcional si solo usás MSAL
   const { instance } = useMsal();
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -17,22 +14,12 @@ export function LoginForm() {
 
     try {
       const loginResponse = await instance.loginPopup(loginRequest);
-      const tokenResponse = await instance.acquireTokenSilent({
-        ...loginRequest,
-        account: loginResponse.account,
-      });
 
-      const accessToken = tokenResponse.accessToken;
-      localStorage.setItem("token", accessToken); // para axios
+      const idToken = loginResponse.idToken;
 
-      // Si querés validar con tu API backend (opcional)
-      await api.post(
-        "/auth/validate",
-        { email },
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
+      console.log("ID Token:", idToken);
+
+      await api.post("/auth/microsoft", { accessToken: idToken });
 
       login(); // cambia estado en el contexto
       navigate("/home");
