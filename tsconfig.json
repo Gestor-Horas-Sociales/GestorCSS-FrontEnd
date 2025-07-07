@@ -2,7 +2,7 @@
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+    // Removed the reference to the missing file
   ],
   "compilerOptions": {
     "baseUrl": ".",

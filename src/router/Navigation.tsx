@@ -1,19 +1,23 @@
-import { useRoutes, Navigate } from "react-router-dom";
-import MainLayout from "@/Pages/Super_User/MainLayout/MainLayout";
-import HomePage from "@/Pages/Super_User/HomePage/Home_page";
-import LoginPage from "@/Pages/Super_User/LogIn/LogIn_page";
-import { UserManagement } from "@/Pages/Super_User/UserManagement/UserManagementPage";
-import { ProyectManagementPage } from "@/Pages/Super_User/ProyectManagement/ProyectManagementPage";
-import { useAuthStore } from "@/store/authStore";
-import { useEffect } from "react";
+"use client"
+
+import { useRoutes, Navigate } from "react-router-dom"
+import MainLayout from "@/Pages/MainLayout/MainLayout"
+import LoginPage from "@/Pages/Auth/LoginPage"
+import DashboardPage from "@/Pages/Dashboard/DashboardPage"
+import UsersPage from "@/Pages/Users/UsersPage"
+import ProjectsPage from "@/Pages/Projects/ProjectsPage"
+import HoursPage from "@/Pages/Hours/HoursPage"
+import ReportsPage from "@/Pages/Reports/ReportsPage"
+import SettingsPage from "@/Pages/Settings/SettingsPage"
+import { useAuthStore } from "@/store/authStore"
+import { useEffect } from "react"
 
 const Navigation = () => {
-
-  const { initializeAuth, isAuthenticated} = useAuthStore();
+  const { initializeAuth, isAuthenticated, user } = useAuthStore()
 
   useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
+    initializeAuth()
+  }, [initializeAuth])
 
   const routes = useRoutes(
     isAuthenticated
@@ -22,21 +26,24 @@ const Navigation = () => {
             path: "/",
             element: <MainLayout />,
             children: [
-              { path: "home", element: <HomePage /> },
-              { path: "UserManagement", element: <UserManagement /> },
-              { path: "ProyectManagement", element: <ProyectManagementPage /> },
-              { path: "*", element: <Navigate to="/home" replace /> },
+              { path: "dashboard", element: <DashboardPage /> },
+              { path: "users/*", element: <UsersPage /> },
+              { path: "projects/*", element: <ProjectsPage /> },
+              { path: "hours/*", element: <HoursPage /> },
+              { path: "reports/*", element: <ReportsPage /> },
+              { path: "settings/*", element: <SettingsPage /> },
+              { path: "*", element: <Navigate to="/dashboard" replace /> },
             ],
           },
-          { path: "/login", element: <Navigate to="/home" replace /> },
+          { path: "/login", element: <Navigate to="/dashboard" replace /> },
         ]
       : [
           { path: "/login", element: <LoginPage /> },
           { path: "*", element: <Navigate to="/login" replace /> },
-        ]
-  );
+        ],
+  )
 
-  return routes;
-};
+  return routes
+}
 
-export default Navigation;
+export default Navigation
