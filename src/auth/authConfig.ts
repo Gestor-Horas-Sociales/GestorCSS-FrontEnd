@@ -4,6 +4,7 @@ export const msalConfig = {
     clientId: import.meta.env.VITE_AZURE_CLIENT_ID,
     authority: import.meta.env.VITE_AUTHORITY_URL,
     redirectUri: import.meta.env.VITE_REDIRECT_URI,
+    navigateToLoginRequestUrl: false,
   },
   cache: {
     cacheLocation: "localStorage",
@@ -12,5 +13,5 @@ export const msalConfig = {
 };
 
 export const loginRequest = {
-  scopes: ["User.Read", "openid", "profile", "email"], // puedes agregar scopes de tu API si la protegés con Azure
+  scopes: ["openid", "profile", "email"],
 };

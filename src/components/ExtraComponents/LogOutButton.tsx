@@ -1,14 +1,14 @@
 // src/components/LogoutButton.tsx
-import { useAuth } from "@/context/authContext";
-import { useMsal } from "@azure/msal-react";
+import { useAuthStore } from "@/store/authStore";
+import { useNavigate } from "react-router";
 
 export function LogoutButton() {
-  const { logout } = useAuth(); // ✅ usamos logout en vez de logoutManual
-  const { instance } = useMsal();
+  const { logout } = useAuthStore();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout(); // Borra token y estado de sesión
-    instance.logoutPopup(); // Finaliza sesión con MSAL (puedes usar logoutRedirect si prefieres)
+    logout();
+    navigate("/login");
   };
 
   return (
