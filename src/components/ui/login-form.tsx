@@ -1,12 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/auth/authConfig";
-import { useAuth } from "@/context/authContext";
 import api from "@/api/axios";
 
 export function LoginForm() {
   const { instance } = useMsal();
-  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -21,7 +19,6 @@ export function LoginForm() {
 
       await api.post("/auth/microsoft", { accessToken: idToken });
 
-      login(); // cambia estado en el contexto
       navigate("/home");
     } catch (err) {
       console.error("Error al iniciar sesión con MSAL:", err);
