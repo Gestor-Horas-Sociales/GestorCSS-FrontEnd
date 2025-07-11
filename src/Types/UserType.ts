@@ -1,4 +1,4 @@
-import type { StudentType } from './StudentType';
+import type { StudentType } from './Student';
 
 export type UserType = {
     id: number;                    

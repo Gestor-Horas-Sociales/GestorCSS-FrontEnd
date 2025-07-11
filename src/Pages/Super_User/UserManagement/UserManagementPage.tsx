@@ -1,0 +1,164 @@
+/* eslint-disable no-empty-pattern */
+"use client";
+
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import ComboboxDemo from "@/components/ExtraComponents/CareerComboBox";
+import YearComboBox from "@/components/ExtraComponents/YearComboBox";
+
+const formSchema = z.object({
+  username: z.string().min(2, {
+    message: "Username must be at least 2 characters.",
+  }),
+});
+
+export function UserManagement() {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      username: "",
+    },
+  });
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log(values);
+  }
+
+  return (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-8 p-4 sm:p-6 rounded-lg"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nombre</FormLabel>
+                <FormControl>
+                  <Input placeholder="Nombre estudiante" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Apellido</FormLabel>
+                <FormControl>
+                  <Input placeholder="Apellido estudiante" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormItem>
+            <FormLabel>Genero</FormLabel>
+            <RadioGroup defaultValue="option-one">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="option-one" id="option-one" />
+                <Label htmlFor="option-one">Femenino</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="option-two" id="option-two" />
+                <Label htmlFor="option-two">Masculino</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="option-three" id="option-three" />
+                <Label htmlFor="option-three">Otro</Label>
+              </div>
+            </RadioGroup>
+          </FormItem>
+          <div className="grid grid-cols-1 gap-4">
+            <FormField
+              control={form.control}
+              name="username" 
+              render={({  }) => (
+                <FormItem>
+                  <FormLabel>Carrera</FormLabel>
+                  <FormControl>
+                    <ComboboxDemo />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ }) => (
+                <FormItem>
+                  <FormLabel>Nivel de carrera</FormLabel>
+                  <FormControl>
+                    <YearComboBox />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Departamento</FormLabel>
+                <FormControl>
+                  <Input placeholder="Seleccione departamento" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Municipio</FormLabel>
+                <FormControl>
+                  <Input placeholder="Seleccione municipio" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormDescription className="text-gray-500"></FormDescription>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button
+            type="submit"
+            className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            Agregar estudiante
+          </Button>
+          <Button
+            type="submit"
+            className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white"
+          >
+            Cargar desde archivo
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
