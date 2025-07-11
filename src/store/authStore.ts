@@ -17,14 +17,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    localStorage.removeItem("isManualAuth");
     localStorage.removeItem("token");
     set({ isAuthenticated: false });
   },
 
   initializeAuth: () => {
-    const stored = localStorage.getItem("isManualAuth") === "true";
     const token = localStorage.getItem("token");
-    set({ isAuthenticated: stored || !!token });
+    set({ isAuthenticated: !!token });
   },
 }));

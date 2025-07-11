@@ -11,14 +11,14 @@ import { toast } from "sonner"
 import { ModeToggle } from "@/components/ModeToggle"
 import { useAuthStore } from "@/store/authStore"
 import { useNavigate } from "react-router"
-import type { User } from "@/types"
+import type { UserType } from "@/Types/UserType"
 
 interface AxiosErrorLike {
   response?: {
     status?: number
     data?: {
       message?: string
-      user?: User
+      user?: UserType
     }
   }
 }
@@ -44,10 +44,10 @@ export default function LoginPage() {
         localStorage.setItem("token", token)
 
         // Actualizar el estado de autenticación con datos del usuario
-        login(user)
+        login()
 
         // Redirigir según el rol del usuario
-        const redirectPath = user.rol === "estudiante" ? "/hours" : "/dashboard"
+        const redirectPath = user.role === "estudiante" ? "/hours" : "/dashboard"
         navigate(redirectPath)
 
         toast.success(`Bienvenido ${user.nombre}!`)
