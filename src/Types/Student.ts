@@ -5,9 +5,9 @@ export type StudentType = {
   email: string
   start_year: number
   gender: string
-  carnet: string
+  student_id_card: number,
   status: string
-  hours_type: "Internas" | "Externas";
+  hours_type: "Select" | "Internas" | "Externas";
   internal_hours: number
   external_hours: number
   career_id: number
@@ -21,3 +21,4 @@ export type StudentType = {
     name: string
   }
 }
+

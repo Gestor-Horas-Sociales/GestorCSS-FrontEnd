@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -28,7 +27,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Users,
   UserPlus,
   Upload,
   Search,
@@ -38,7 +36,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { getEstudiantes } from "@/api/estudiantes";
+
+import { getEstudiantes, createEstudiante } from "@/api/estudiantes";
 import type { StudentType } from "@/Types/Student";
 
 export default function UsersPage() {
@@ -47,7 +46,24 @@ export default function UsersPage() {
   const [filterCarrera, setFilterCarrera] = useState("all");
   const [filterAño, setFilterAño] = useState("all");
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
-  //Obtener estudiantes
+  const [formData, setFormData] = useState<
+    Omit<StudentType, "id" | "career" | "location">
+  >({
+    name: "",
+    last_name: "",
+    email: "",
+    career_id: 1,
+    location_id: 1,
+    start_year: new Date().getFullYear(),
+    gender: "",
+    status: "",
+    hours_type: "Select",
+    internal_hours: 0,
+    external_hours: 0,
+    student_id_card: 0, // Asegúrate de incluir este campo si es necesario
+  });
+  const [error, setError] = useState("");
+
   useEffect(() => {
     const fetchEstudiantes = async () => {
       try {
@@ -59,7 +75,60 @@ export default function UsersPage() {
     };
     fetchEstudiantes();
   }, []);
-  // Función para calcular horas y porcentaje de progreso
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]:
+        e.target.type === "number" ? Number(e.target.value) : e.target.value,
+    });
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData({
+      ...formData,
+      [name]:
+        name === "career_id" || name === "location_id" || name === "start_year"
+          ? Number(value)
+          : value,
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      const newStudent = await createEstudiante(formData);
+      setEstudiantes([...estudiantes, newStudent.data]);
+      setIsNewUserModalOpen(false);
+
+      // Reset form data
+      setFormData({
+        name: "",
+        last_name: "",
+        email: "",
+        career_id: 1,
+        location_id: 1,
+        start_year: new Date().getFullYear(),
+        gender: "masculino",
+        status: "active",
+        hours_type: "Internas",
+        internal_hours: 0,
+        external_hours: 0,
+        student_id_card: 0, // Asegúrate de incluir este campo si es necesario
+        // Reset this field as well
+      });
+    } catch (err) {
+      console.error("Fallo en el registro:", err);
+      if (err instanceof Error && (err as any).response?.data?.message) {
+        setError((err as any).response.data.message);
+      } else {
+        setError("Ocurrió un error al registrar el estudiante");
+      }
+    }
+  };
+
   const calcularHoras = (estudiante: StudentType) => {
     const horasInternas = estudiante.internal_hours || 0;
     const horasExternas = estudiante.external_hours || 0;
@@ -72,28 +141,22 @@ export default function UsersPage() {
     return { horasCompletadas, horasRequeridas, porcentaje };
   };
 
-  // Filtrado
   const filteredEstudiantes = estudiantes.filter((estudiante) => {
-    const nombreCompleto = estudiante.name.toLowerCase(); // Si tienes apellido, concatena aquí
+    const nombreCompleto =
+      `${estudiante.name} ${estudiante.last_name}`.toLowerCase();
     const busca = searchTerm.toLowerCase();
-
     const matchesSearch =
-      nombreCompleto.includes(busca) || estudiante.carnet.includes(busca);
-
+      nombreCompleto.includes(busca) ||
+      estudiante.student_id_card.toString().includes(busca);
     const matchesCarrera =
       filterCarrera === "all" || estudiante.career?.name === filterCarrera;
     const matchesAño =
       filterAño === "all" || estudiante.start_year.toString() === filterAño;
-
     return matchesSearch && matchesCarrera && matchesAño;
-
-    //Crear estudiantes
-    
   });
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header y botones */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Gestión de Usuarios</h1>
@@ -116,94 +179,156 @@ export default function UsersPage() {
               <DialogHeader>
                 <DialogTitle>Registrar Nuevo Usuario</DialogTitle>
               </DialogHeader>
-              <form className="grid gap-4 py-4">
+              <form className="grid gap-4 py-4" onSubmit={handleSubmit}>
+                {error && <div className="text-red-500 text-sm">{error}</div>}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Nombre</label>
-                    <Input
-                      name="name"
-                      placeholder="Nombre del estudiante"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Apellido</label>
-                    <Input
-                      name="last_name"
-                      placeholder="Apellido del estudiante"
-                      required
-                    />
-                  </div>
+                  <Input
+                    name="name"
+                    placeholder="Nombre"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Input
+                    name="last_name"
+                    placeholder="Apellido"
+                    value={formData.last_name}
+                    onChange={handleInputChange}
+                    required
+                  />
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Carnet</label>
-                    <Input name="carnet" placeholder="00123456" required />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Email</label>
-                    <Input
-                      type="email"
-                      name="email"
-                      placeholder="estudiante@uca.edu.sv"
-                      required
-                    />
-                  </div>
+                  <Input
+                    type="number"
+                    name="student_id_card"
+                    placeholder="Student ID Card"
+                    value={formData.student_id_card}
+                    onChange={handleInputChange}
+                    required
+                  />{" "}
+                  <Input
+                    type="email"
+                    name="email"
+                    placeholder="Email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                  />
                 </div>
-
                 <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Carrera</label>
-                    <Select name="career_id">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Ing. Sistemas</SelectItem>
-                        <SelectItem value="2">Ing. Civil</SelectItem>
-                        <SelectItem value="3">Ing. Industrial</SelectItem>
-                        <SelectItem value="4">Arquitectura</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select
+                    value={formData.career_id.toString()}
+                    onValueChange={(val) =>
+                      handleSelectChange("career_id", val)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Carrera" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Ing. Sistemas</SelectItem>
+                      <SelectItem value="2">Ing. Civil</SelectItem>
+                      <SelectItem value="3">Ing. Industrial</SelectItem>
+                      <SelectItem value="4">Arquitectura</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                  <div>
-                    <label className="text-sm font-medium">Año de Inicio</label>
-                    <Select name="start_year">
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Año" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 51 }, (_, i) => {
-                            const year = new Date().getFullYear() - 25 + i;
-                            return (
-                              <SelectItem key={year} value={year.toString()}>
-                                {year}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    </Select>
-                  </div>
+                  <Select
+                    value={formData.start_year.toString()}
+                    onValueChange={(val) =>
+                      handleSelectChange("start_year", val)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Año de Inicio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from(
+                        { length: 10 },
+                        (_, i) => new Date().getFullYear() - i
+                      ).map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-                  <div>
-                    <label className="text-sm font-medium">Género</label>
-                    <Select name="gender">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Género" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="masculino">Masculino</SelectItem>
-                        <SelectItem value="femenino">Femenino</SelectItem>
-                        <SelectItem value="otro">Otro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select
+                    value={formData.gender}
+                    onValueChange={(val) => handleSelectChange("gender", val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Género" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="masculino">Masculino</SelectItem>
+                      <SelectItem value="femenino">Femenino</SelectItem>
+                      <SelectItem value="otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <Select
+                    value={formData.status}
+                    onValueChange={(val) => handleSelectChange("status", val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Activo</SelectItem>
+                      <SelectItem value="inactive">Inactivo</SelectItem>
+                    </SelectContent>
+                  </Select>
 
+                  <Select
+                    value={formData.hours_type}
+                    onValueChange={(val) =>
+                      handleSelectChange("hours_type", val)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tipo de Horas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Internas">Internas</SelectItem>
+                      <SelectItem value="Externas">Externas</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={formData.location_id.toString()}
+                    onValueChange={(val) =>
+                      handleSelectChange("location_id", val)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ubicación" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Sede Central</SelectItem>
+                      <SelectItem value="2">Campus Norte</SelectItem>
+                      <SelectItem value="3">Campus Sur</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    type="number"
+                    name="internal_hours"
+                    placeholder="Horas Internas"
+                    value={formData.internal_hours}
+                    onChange={handleInputChange}
+                  />
+                  <Input
+                    type="number"
+                    name="external_hours"
+                    placeholder="Horas Externas"
+                    value={formData.external_hours}
+                    onChange={handleInputChange}
+                  />
+                </div>
                 <div className="flex justify-end gap-2 mt-4">
                   <Button
                     variant="outline"
@@ -217,20 +342,16 @@ export default function UsersPage() {
               </form>
             </DialogContent>
           </Dialog>
-
           <Button variant="outline">
             <Upload className="w-4 h-4 mr-2" />
             Importar Excel
           </Button>
-
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" />
             Exportar
           </Button>
         </div>
       </div>
-
-      {/* Filtros y búsqueda */}
       <Card>
         <CardHeader>
           <CardTitle>Lista de Estudiantes</CardTitle>
@@ -246,7 +367,6 @@ export default function UsersPage() {
                 className="pl-8"
               />
             </div>
-
             <div className="flex items-center gap-2">
               <Select value={filterCarrera} onValueChange={setFilterCarrera}>
                 <SelectTrigger className="w-[180px]">
@@ -264,24 +384,21 @@ export default function UsersPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-
               <Select value={filterAño} onValueChange={setFilterAño}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue placeholder="Todos los años" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="1">1° Año</SelectItem>
-                  <SelectItem value="2">2° Año</SelectItem>
-                  <SelectItem value="3">3° Año</SelectItem>
-                  <SelectItem value="4">4° Año</SelectItem>
-                  <SelectItem value="5">5° Año</SelectItem>
+                  {[1, 2, 3, 4, 5].map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}° Año
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-
-          {/* Tabla */}
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -300,15 +417,17 @@ export default function UsersPage() {
                   return (
                     <TableRow key={estudiante.id}>
                       <TableCell>
-                        <div className="font-medium">{estudiante.name}</div>
+                        <div className="font-medium">
+                          {estudiante.name} {estudiante.last_name}
+                        </div>
                         <div className="text-sm text-muted-foreground">
-                          {estudiante.carnet} • {estudiante.email}
+                          {estudiante.student_id_card} • {estudiante.email}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {estudiante.career?.name || "Campo vacío"}
+                        {estudiante.career?.name || "Sin carrera"}
                       </TableCell>
-                      <TableCell>{estudiante.start_year}°</TableCell>
+                      <TableCell>{estudiante.start_year}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex justify-between text-sm">
