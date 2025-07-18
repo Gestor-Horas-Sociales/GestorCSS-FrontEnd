@@ -4,7 +4,7 @@ import { useRoutes, Navigate } from "react-router-dom"
 import MainLayout from "@/Pages/MainLayout/MainLayout"
 import LoginPage from "@/Pages/Auth/LoginPage"
 import DashboardPage from "@/Pages/Dashboard/DashboardPage"
-import UsersPage from "@/Pages/User/UsersPage"
+import UsersPage from "@/Pages/User/StudentsPage"
 import ProjectsPage from "@/Pages/Projects/ProjectsPage"
 import HoursPage from "@/Pages/Hours/HoursPage"
 import ReportsPage from "@/Pages/Reports/ReportsPage"
@@ -38,8 +38,23 @@ const Navigation = () => {
           { path: "/login", element: <Navigate to="/dashboard" replace /> },
         ]
       : [
-          { path: "/login", element: <LoginPage /> },
-          { path: "*", element: <Navigate to="/login" replace /> },
+          
+        {
+          path: "/",
+          element: <MainLayout />,
+          children: [
+            { path: "dashboard", element: <DashboardPage /> },
+            { path: "users/*", element: <UsersPage /> },
+            { path: "projects/*", element: <ProjectsPage /> },
+            { path: "hours/*", element: <HoursPage /> },
+            { path: "reports/*", element: <ReportsPage /> },
+            { path: "settings/*", element: <SettingsPage /> },
+            { path: "*", element: <Navigate to="/dashboard" replace /> },
+          ],
+        },
+        { path: "/login", element: <Navigate to="/dashboard" replace /> },
+        // { path: "/login", element: <LoginPage /> },
+          // { path: "*", element: <Navigate to="/login" replace /> },
         ],
   )
 

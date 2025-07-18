@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,125 +36,51 @@ import {
   Trash2,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-
-import { getEstudiantes, createEstudiante } from "@/api/estudiantes";
-import type { StudentType } from "@/Types/Student";
+import { useEstudiantes } from "@/hooks/use-estudiantes";
 
 export default function UsersPage() {
-  const [estudiantes, setEstudiantes] = useState<StudentType[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterCarrera, setFilterCarrera] = useState("all");
-  const [filterAño, setFilterAño] = useState("all");
-  const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
-  const [formData, setFormData] = useState<
-    Omit<StudentType, "id" | "career" | "location">
-  >({
-    name: "",
-    last_name: "",
-    email: "",
-    career_id: 1,
-    location_id: 1,
-    start_year: new Date().getFullYear(),
-    gender: "",
-    status: "",
-    hours_type: "Select",
-    internal_hours: 0,
-    external_hours: 0,
-    student_id_card: 0, // Asegúrate de incluir este campo si es necesario
-  });
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const fetchEstudiantes = async () => {
-      try {
-        const data = await getEstudiantes();
-        setEstudiantes(data);
-      } catch (error) {
-        console.error("Error al cargar estudiantes:", error);
-      }
-    };
-    fetchEstudiantes();
-  }, []);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]:
-        e.target.type === "number" ? Number(e.target.value) : e.target.value,
-    });
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({
-      ...formData,
-      [name]:
-        name === "career_id" || name === "location_id" || name === "start_year"
-          ? Number(value)
-          : value,
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    try {
-      const newStudent = await createEstudiante(formData);
-      setEstudiantes([...estudiantes, newStudent.data]);
-      setIsNewUserModalOpen(false);
-
-      // Reset form data
-      setFormData({
-        name: "",
-        last_name: "",
-        email: "",
-        career_id: 1,
-        location_id: 1,
-        start_year: new Date().getFullYear(),
-        gender: "masculino",
-        status: "active",
-        hours_type: "Internas",
-        internal_hours: 0,
-        external_hours: 0,
-        student_id_card: 0, // Asegúrate de incluir este campo si es necesario
-        // Reset this field as well
-      });
-    } catch (err) {
-      console.error("Fallo en el registro:", err);
-      if (err instanceof Error && (err as any).response?.data?.message) {
-        setError((err as any).response.data.message);
-      } else {
-        setError("Ocurrió un error al registrar el estudiante");
-      }
-    }
-  };
-
-  const calcularHoras = (estudiante: StudentType) => {
-    const horasInternas = estudiante.internal_hours || 0;
-    const horasExternas = estudiante.external_hours || 0;
-    const horasCompletadas = horasInternas + horasExternas;
-    const horasRequeridas = 600;
-    const porcentaje = Math.min(
-      100,
-      Math.round((horasCompletadas / horasRequeridas) * 100)
-    );
-    return { horasCompletadas, horasRequeridas, porcentaje };
-  };
+  const {
+    estudiantes,
+    searchTerm,
+    setSearchTerm,
+    filterCarrera,
+    setFilterCarrera,
+    filterAño,
+    setFilterAño,
+    isNewUserModalOpen,
+    setIsNewUserModalOpen,
+    formData,
+    error,
+    handleInputChange,
+    handleSelectChange,
+    handleSubmit,
+    handleDelete,
+    startEdit,
+    calcularHoras,
+  } = useEstudiantes();
 
   const filteredEstudiantes = estudiantes.filter((estudiante) => {
     const nombreCompleto =
-      `${estudiante.name} ${estudiante.last_name}`.toLowerCase();
+      `${estudiante.name} ${estudiante.lastname}`.toLowerCase();
     const busca = searchTerm.toLowerCase();
     const matchesSearch =
       nombreCompleto.includes(busca) ||
       estudiante.student_id_card.toString().includes(busca);
     const matchesCarrera =
-      filterCarrera === "all" || estudiante.career?.name === filterCarrera;
+      filterCarrera === "all" ||
+      estudiante.career_year === Number(filterCarrera);
     const matchesAño =
-      filterAño === "all" || estudiante.start_year.toString() === filterAño;
+      filterAño === "all" || estudiante.career_year.toString() === filterAño;
     return matchesSearch && matchesCarrera && matchesAño;
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
+  const totalPages = Math.ceil(filteredEstudiantes.length / itemsPerPage);
+  const paginatedEstudiantes = filteredEstudiantes.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -170,19 +96,23 @@ export default function UsersPage() {
             onOpenChange={setIsNewUserModalOpen}
           >
             <DialogTrigger asChild>
-              <Button>
+              <Button className="rounded-2xl shadow-sm">
                 <UserPlus className="w-4 h-4 mr-2" />
                 Nuevo Usuario
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-3xl rounded-2xl">
               <DialogHeader>
-                <DialogTitle>Registrar Nuevo Usuario</DialogTitle>
+                <DialogTitle className="text-xl font-semibold text-primary">
+                  Registrar Nuevo Usuario
+                </DialogTitle>
               </DialogHeader>
-              <form className="grid gap-4 py-4" onSubmit={handleSubmit}>
+              <form className="space-y-6" onSubmit={handleSubmit}>
                 {error && <div className="text-red-500 text-sm">{error}</div>}
+
                 <div className="grid grid-cols-2 gap-4">
                   <Input
+                    className="rounded-2xl"
                     name="name"
                     placeholder="Nombre"
                     value={formData.name}
@@ -190,31 +120,36 @@ export default function UsersPage() {
                     required
                   />
                   <Input
-                    name="last_name"
+                    className="rounded-2xl"
+                    name="lastname"
                     placeholder="Apellido"
-                    value={formData.last_name}
+                    value={formData.lastname}
                     onChange={handleInputChange}
                     required
                   />
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <Input
+                    className="rounded-2xl"
                     type="number"
                     name="student_id_card"
-                    placeholder="Student ID Card"
+                    placeholder="Carnet de estudiante"
                     value={formData.student_id_card}
                     onChange={handleInputChange}
                     required
-                  />{" "}
+                  />
                   <Input
+                    className="rounded-2xl"
                     type="email"
                     name="email"
-                    placeholder="Email"
+                    placeholder="Correo electrónico"
                     value={formData.email}
                     onChange={handleInputChange}
                     required
                   />
                 </div>
+
                 <div className="grid grid-cols-3 gap-4">
                   <Select
                     value={formData.career_id.toString()}
@@ -222,7 +157,7 @@ export default function UsersPage() {
                       handleSelectChange("career_id", val)
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="rounded-2xl">
                       <SelectValue placeholder="Carrera" />
                     </SelectTrigger>
                     <SelectContent>
@@ -234,12 +169,12 @@ export default function UsersPage() {
                   </Select>
 
                   <Select
-                    value={formData.start_year.toString()}
+                    value={formData.career_year.toString()}
                     onValueChange={(val) =>
-                      handleSelectChange("start_year", val)
+                      handleSelectChange("career_year", val)
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="rounded-2xl">
                       <SelectValue placeholder="Año de Inicio" />
                     </SelectTrigger>
                     <SelectContent>
@@ -258,7 +193,7 @@ export default function UsersPage() {
                     value={formData.gender}
                     onValueChange={(val) => handleSelectChange("gender", val)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="rounded-2xl">
                       <SelectValue placeholder="Género" />
                     </SelectTrigger>
                     <SelectContent>
@@ -268,85 +203,71 @@ export default function UsersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+
+                <div className="flex grid-cols-3 gap-2 items-center">
                   <Select
-                    value={formData.status}
-                    onValueChange={(val) => handleSelectChange("status", val)}
+                    value={formData.active.toString()}
+                    onValueChange={(val) => handleSelectChange("active", val)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="rounded-2xl">
                       <SelectValue placeholder="Estado" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Activo</SelectItem>
-                      <SelectItem value="inactive">Inactivo</SelectItem>
+                      <SelectItem value="true">Activo</SelectItem>
+                      <SelectItem value="false">Inactivo</SelectItem>
                     </SelectContent>
                   </Select>
-
-                  <Select
-                    value={formData.hours_type}
-                    onValueChange={(val) =>
-                      handleSelectChange("hours_type", val)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tipo de Horas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Internas">Internas</SelectItem>
-                      <SelectItem value="Externas">Externas</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={formData.location_id.toString()}
-                    onValueChange={(val) =>
-                      handleSelectChange("location_id", val)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Ubicación" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Sede Central</SelectItem>
-                      <SelectItem value="2">Campus Norte</SelectItem>
-                      <SelectItem value="3">Campus Sur</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-1">
+                      <p>Horas internas</p>
+                      <Input
+                        className="rounded-2xl"
+                        type="number"
+                        name="internal_hours"
+                        placeholder="Horas Internas"
+                        value={formData.internal_hours}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-1">
+                      <p>Horas externas</p>
+                      <Input
+                        className="rounded-2xl"
+                        type="number"
+                        name="external_hours"
+                        placeholder="Horas Externas"
+                        value={formData.external_hours}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    type="number"
-                    name="internal_hours"
-                    placeholder="Horas Internas"
-                    value={formData.internal_hours}
-                    onChange={handleInputChange}
-                  />
-                  <Input
-                    type="number"
-                    name="external_hours"
-                    placeholder="Horas Externas"
-                    value={formData.external_hours}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="flex justify-end gap-2 mt-4">
+
+                <div className="flex justify-end gap-2 pt-4 border-t mt-6">
                   <Button
                     variant="outline"
                     type="button"
                     onClick={() => setIsNewUserModalOpen(false)}
+                    className="rounded-2xl"
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit">Registrar Usuario</Button>
+                  <Button type="submit" className="rounded-2xl shadow-md">
+                    Registrar Usuario
+                  </Button>
                 </div>
               </form>
             </DialogContent>
           </Dialog>
-          <Button variant="outline">
+
+          <Button variant="outline" className="rounded-2xl">
             <Upload className="w-4 h-4 mr-2" />
             Importar Excel
           </Button>
-          <Button variant="outline">
+
+          <Button variant="outline" className="rounded-2xl">
             <Download className="w-4 h-4 mr-2" />
             Exportar
           </Button>
@@ -411,14 +332,14 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEstudiantes.map((estudiante) => {
+                {paginatedEstudiantes.map((estudiante) => {
                   const { horasCompletadas, horasRequeridas, porcentaje } =
                     calcularHoras(estudiante);
                   return (
                     <TableRow key={estudiante.id}>
                       <TableCell>
                         <div className="font-medium">
-                          {estudiante.name} {estudiante.last_name}
+                          {estudiante.name} {estudiante.lastname}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {estudiante.student_id_card} • {estudiante.email}
@@ -427,7 +348,7 @@ export default function UsersPage() {
                       <TableCell>
                         {estudiante.career?.name || "Sin carrera"}
                       </TableCell>
-                      <TableCell>{estudiante.start_year}</TableCell>
+                      <TableCell>{estudiante.career_year}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex justify-between text-sm">
@@ -444,13 +365,20 @@ export default function UsersPage() {
                           <Button variant="ghost" size="sm">
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              startEdit(estudiante)
+                            }
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="text-red-600"
+                            onClick={() => handleDelete(estudiante.id)}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -463,6 +391,31 @@ export default function UsersPage() {
             </Table>
           </div>
         </CardContent>
+        <div className="flex justify-center mt-6 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          >
+            Anterior
+          </Button>
+
+          <span className="px-2 py-1 text-sm">
+            Página {currentPage} de {totalPages}
+          </span>
+
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === totalPages}
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+          >
+            Siguiente
+          </Button>
+        </div>
       </Card>
     </div>
   );
