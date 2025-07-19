@@ -37,8 +37,10 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
+import { useCarrera } from "@/hooks/use-carrera";
 
 export default function UsersPage() {
+  // Cargar los estudiantes y sus funciones desde el hook useEstudiantes
   const {
     estudiantes,
     searchTerm,
@@ -57,7 +59,11 @@ export default function UsersPage() {
     handleDelete,
     startEdit,
     calcularHoras,
+    resetForm
   } = useEstudiantes();
+
+  // Cargar las carreras desde el hook
+  const { carreras } = useCarrera();
 
   const filteredEstudiantes = estudiantes.filter((estudiante) => {
     const nombreCompleto =
@@ -93,7 +99,12 @@ export default function UsersPage() {
         <div className="flex items-center gap-2">
           <Dialog
             open={isNewUserModalOpen}
-            onOpenChange={setIsNewUserModalOpen}
+            onOpenChange={(isOpen) => {
+              setIsNewUserModalOpen(isOpen);
+              if (!isOpen) {
+                resetForm(); // 👈 Limpia el formulario al cerrar
+              }
+            }}
           >
             <DialogTrigger asChild>
               <Button className="rounded-2xl shadow-sm">
@@ -101,16 +112,19 @@ export default function UsersPage() {
                 Nuevo Usuario
               </Button>
             </DialogTrigger>
+
             <DialogContent className="max-w-3xl rounded-2xl">
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold text-primary">
                   Registrar Nuevo Usuario
                 </DialogTitle>
               </DialogHeader>
+
               <form className="space-y-6" onSubmit={handleSubmit}>
                 {error && <div className="text-red-500 text-sm">{error}</div>}
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* Nombre y Apellido */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     className="rounded-2xl"
                     name="name"
@@ -129,7 +143,8 @@ export default function UsersPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* Carnet y Email */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     className="rounded-2xl"
                     type="number"
@@ -150,7 +165,8 @@ export default function UsersPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                {/* Carrera, Año de inicio y Género */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Select
                     value={formData.career_id.toString()}
                     onValueChange={(val) =>
@@ -161,10 +177,11 @@ export default function UsersPage() {
                       <SelectValue placeholder="Carrera" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Ing. Sistemas</SelectItem>
-                      <SelectItem value="2">Ing. Civil</SelectItem>
-                      <SelectItem value="3">Ing. Industrial</SelectItem>
-                      <SelectItem value="4">Arquitectura</SelectItem>
+                      {carreras.map((carrera) => (
+                        <SelectItem key={carrera.id} value={String(carrera.id)}>
+                          {carrera.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
 
@@ -178,12 +195,9 @@ export default function UsersPage() {
                       <SelectValue placeholder="Año de Inicio" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from(
-                        { length: 10 },
-                        (_, i) => new Date().getFullYear() - i
-                      ).map((year) => (
+                      {[1, 2, 3, 4, 5].map((year) => (
                         <SelectItem key={year} value={year.toString()}>
-                          {year}
+                          {year}° Año
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -197,14 +211,15 @@ export default function UsersPage() {
                       <SelectValue placeholder="Género" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="masculino">Masculino</SelectItem>
-                      <SelectItem value="femenino">Femenino</SelectItem>
-                      <SelectItem value="otro">Otro</SelectItem>
+                      <SelectItem value="M">Masculino</SelectItem>
+                      <SelectItem value="F">Femenino</SelectItem>
+                      <SelectItem value="O">Otro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="flex grid-cols-3 gap-2 items-center">
+                {/* Estado, Horas internas y externas */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Select
                     value={formData.active.toString()}
                     onValueChange={(val) => handleSelectChange("active", val)}
@@ -217,34 +232,37 @@ export default function UsersPage() {
                       <SelectItem value="false">Inactivo</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid grid-cols-1 gap-1">
-                      <p>Horas internas</p>
-                      <Input
-                        className="rounded-2xl"
-                        type="number"
-                        name="internal_hours"
-                        placeholder="Horas Internas"
-                        value={formData.internal_hours}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 gap-1">
-                      <p>Horas externas</p>
-                      <Input
-                        className="rounded-2xl"
-                        type="number"
-                        name="external_hours"
-                        placeholder="Horas Externas"
-                        value={formData.external_hours}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
+
+                  <Input
+                    className="rounded-2xl"
+                    type="number"
+                    name="internal_hours"
+                    placeholder="Horas Internas"
+                    value={formData.internal_hours}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Input
+                    className="rounded-2xl"
+                    type="number"
+                    name="external_hours"
+                    placeholder="Horas Externas"
+                    value={formData.external_hours}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div>
+                  <Input
+                    className="rounded-2xl"
+                    name="address"
+                    placeholder="Dirección"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                  />
                 </div>
 
+                {/* Botones */}
                 <div className="flex justify-end gap-2 pt-4 border-t mt-6">
                   <Button
                     variant="outline"
@@ -368,9 +386,7 @@ export default function UsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() =>
-                              startEdit(estudiante)
-                            }
+                            onClick={() => startEdit(estudiante)}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>

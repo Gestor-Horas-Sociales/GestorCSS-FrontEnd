@@ -4,8 +4,8 @@ import {
   createEstudiante,
   deleteEstudiante,
 } from "@/api/estudiantes";
-import type { StudentType } from "@/Types/Student";
-import { getEstudianteById } from "@/api/estudiantes";
+import type { StudentType } from "@/Types/StudentType";
+import { getEstudianteById, updateEstudiante } from "@/api/estudiantes";
 
 export const useEstudiantes = () => {
   const [estudiantes, setEstudiantes] = useState<StudentType[]>([]);
@@ -16,7 +16,7 @@ export const useEstudiantes = () => {
   const [error, setError] = useState("");
 
   // FormData con career_id explícito, sin career ni location
-  type FormDataType = Omit<StudentType, "id" | "location" | "career"> & { career_id: number; id?: number };
+  type FormDataType = Omit<StudentType, "id" | "career"> & { career_id: number; id?: number };
 
   const [formData, setFormData] = useState<FormDataType>({
     name: "",
@@ -80,6 +80,7 @@ export const useEstudiantes = () => {
       career_id: 1,
       id: undefined,
     });
+    setError("");
   };
 
   const prepararDatosEstudiante = (formData: FormDataType) => ({
@@ -89,13 +90,8 @@ export const useEstudiantes = () => {
     email: formData.email || "",
     internal_hours: Number(formData.internal_hours) || 0,
     external_hours: Number(formData.external_hours) || 0,
-    gender:
-      formData.gender === "masculino"
-        ? "M"
-        : formData.gender === "femenino"
-          ? "F"
-          : formData.gender || "O",
     student_id_card: Number(formData.student_id_card) || 0,
+    gender: formData.gender,
     career_year: Number(formData.career_year) || 1,
     career_id: Number(formData.career_id) || 1,
     active: Boolean(formData.active),
@@ -108,19 +104,31 @@ export const useEstudiantes = () => {
     setError("");
 
     try {
-      // Si viene id, es edición
       const esEdicion = !!formData.id && formData.id > 0;
 
-      // Enviar al backend: si usás POST para crear y actualizar,
-      // envía formData completo con o sin id
-      const response = await createEstudiante(formData);
+      let response;
 
-      const nuevoEstudiante = response.data;
+      if (esEdicion) {
+        console.log("Editando estudiante:", formData);
+        // PUT si es edición
+        if (formData.id !== undefined) {
+          response = await updateEstudiante(formData.id.toString(), formData);
+        } else {
+          throw new Error("formData.id is undefined");
+        }
+      } else {
+        // POST si es nuevo
+        response = await createEstudiante(prepararDatosEstudiante(formData));
+      }
+
+      const estudianteActualizado = response.data;
 
       setEstudiantes((prev) =>
         esEdicion
-          ? prev.map((est) => (est.id === formData.id ? nuevoEstudiante : est))
-          : [...prev, nuevoEstudiante]
+          ? prev.map((est) =>
+            est.id === formData.id ? estudianteActualizado : est
+          )
+          : [...prev, estudianteActualizado]
       );
 
       setIsNewUserModalOpen(false);
@@ -174,7 +182,7 @@ export const useEstudiantes = () => {
       lastname: estudiante.lastname,
       email: estudiante.email,
       student_id_card: estudiante.student_id_card,
-      gender: estudiante.gender,
+      gender: estudiante.gender || "",
       active: estudiante.active,
       internal_hours: estudiante.internal_hours,
       external_hours: estudiante.external_hours,
@@ -206,6 +214,7 @@ export const useEstudiantes = () => {
     calcularHoras,
     fetchEstudianteById,
     startEdit,
-    prepararDatosEstudiante
+    prepararDatosEstudiante,
+    resetForm
   };
 };

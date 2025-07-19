@@ -1,5 +1,5 @@
 import { api } from "./axios"; // tu instancia centralizada
-import type { StudentType } from "@/Types/Student"; // define el tipo si lo tienes
+import type { StudentType } from "@/Types/StudentType"; // define el tipo si lo tienes
 
 // Obtener todos los estudiantes
 export const getEstudiantes = async () => {
