@@ -1,36 +1,31 @@
-"use client"
+"use client";
 
-import type * as React from "react"
+import type * as React from "react";
 import {
   BookOpen,
   Command,
-  Frame,
-  LifeBuoy,
-  PieChart,
   Settings2,
   SquareTerminal,
   Users,
   Clock,
   FileText,
-  Bell,
-  Calendar,
-  MapPin,
-} from "lucide-react"
-import { Link } from "react-router-dom" // 👈 IMPORTANTE
+  Building
+} from "lucide-react";
+import { Link } from "react-router-dom";
 
-import { useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-
-import { useAuthStore } from "@/store/authStore"
-import { NavUser } from "@/components/ui/nav-user"
+  SidebarFooter,
+} from "@/components/ui/sidebar";
+import { jwtDecode } from "jwt-decode";
+import type { UserType } from "@/Types/UserType";
+import { NavUser } from "@/components/ui/nav-user";
 
 const data = {
   navMain: [
@@ -52,6 +47,14 @@ const data = {
         { title: "Estudiantes", url: "/users/students" },
         { title: "Coordinadores", url: "/users/coordinators" },
         { title: "Importar Datos", url: "/users/import" },
+      ],
+    },
+    {
+      title: "Instituciones",
+      url: "/institutions",
+      icon: Building,
+      items: [
+        { title: "Instituciones", url: "/institutions" },
       ],
     },
     {
@@ -95,35 +98,34 @@ const data = {
       ],
     },
   ],
-  navSecondary: [
-    { title: "Notificaciones", url: "/notifications", icon: Bell },
-    { title: "Calendario", url: "/calendar", icon: Calendar },
-    { title: "Soporte", url: "/support", icon: LifeBuoy },
-  ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuthStore()
-  const location = useLocation()
+  const location = useLocation();
+
+  const user = jwtDecode<UserType>(localStorage.getItem("token") || "{}");
 
   const getFilteredNavigation = () => {
-    if (!user) return data.navMain
-    switch (user.rol) {
-      case "super_admin":
-        return data.navMain
-      case "coordinador":
-        return data.navMain.filter((item) => item.url !== "/settings")
-      case "estudiante":
+    if (!user) return data.navMain;
+    switch (user.role) {
+      case 1:
+        return data.navMain;
+      case 3:
+        return data.navMain.filter((item) => item.url !== "/settings");
+      case 2:
         return data.navMain.filter((item) =>
           ["/dashboard", "/hours", "/projects"].includes(item.url)
-        )
+        );
       default:
-        return []
+        return [];
     }
-  }
+  };
 
   return (
-    <Sidebar className="top-(--header-height) h-[calc(100svh-var(--header-height))]!" {...props}>
+    <Sidebar
+      className="top-(--header-height) h-[calc(100svh-var(--header-height))]!"
+      {...props}
+    >
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -145,7 +147,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarMenu>
           {getFilteredNavigation().map((item) => {
-            const isActive = location.pathname.startsWith(item.url)
+            const isActive = location.pathname.startsWith(item.url);
 
             return (
               <SidebarMenuItem key={item.url}>
@@ -163,29 +165,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            )
+            );
           })}
-        </SidebarMenu>
-
-        {/* Subnavegación */}
-        <SidebarMenu className="mt-4">
-          {data.navSecondary.map((item) => (
-            <SidebarMenuItem key={item.url}>
-              <SidebarMenuButton asChild>
-                <Link
-                  to={item.url}
-                  className={`flex w-full items-center gap-2 rounded px-3 py-2 text-sm font-medium transition-colors ${
-                    location.pathname.startsWith(item.url)
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <item.icon className="size-4" />
-                  <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
         </SidebarMenu>
       </SidebarContent>
 
@@ -193,12 +174,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavUser
           user={{
             // eslint-disable-next-line no-constant-binary-expression
-            name: `${user?.nombre ?? ""} ${user?.apellido ?? ""}` || "Usuario",
+            name: `${user?.name ?? ""} ${user?.lastname ?? ""}` || "Usuario",
             email: user?.email || "usuario@uca.edu.sv",
             avatar: "/avatars/default.jpg",
           }}
         />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

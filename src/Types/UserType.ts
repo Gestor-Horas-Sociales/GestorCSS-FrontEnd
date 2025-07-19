@@ -1,9 +1,10 @@
 import type { StudentType } from './StudentType';
 
 export type UserType = {
-    id: number;                    
+    id?: number;                    
     name: string;
+    lastname: string;
     email: string;
-    role: string; // "Estudiante" | "Profesor" | "Administrador" 
+    role: number;
     student?: StudentType;         
   };

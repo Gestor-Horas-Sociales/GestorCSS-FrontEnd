@@ -11,6 +11,7 @@ import ReportsPage from "@/Pages/Reports/ReportsPage";
 import SettingsPage from "@/Pages/Settings/SettingsPage";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect } from "react";
+import Institutions from "@/Pages/Institutions/Institutions";
 
 const Navigation = () => {
   const { initializeAuth, isAuthenticated } = useAuthStore();
@@ -28,6 +29,7 @@ const Navigation = () => {
             children: [
               { path: "dashboard", element: <DashboardPage /> },
               { path: "users/*", element: <UsersPage /> },
+              { path: "institutions/*", element: <Institutions /> },
               { path: "projects/*", element: <ProjectsPage /> },
               { path: "hours/*", element: <HoursPage /> },
               { path: "reports/*", element: <ReportsPage /> },

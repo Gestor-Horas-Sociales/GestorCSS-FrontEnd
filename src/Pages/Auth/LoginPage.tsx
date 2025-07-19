@@ -63,7 +63,7 @@ export default function LoginPage() {
 
         // Redirigir según el rol del usuario
         const redirectPath =
-          user.role === "Estudiante" ? "/hours" : "/dashboard";
+          user.role === 2 ? "/hours" : "/dashboard";
 
         navigate(redirectPath);
       }
