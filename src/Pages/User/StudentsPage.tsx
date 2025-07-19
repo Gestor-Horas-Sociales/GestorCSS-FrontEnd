@@ -59,7 +59,7 @@ export default function UsersPage() {
     handleDelete,
     startEdit,
     calcularHoras,
-    resetForm
+    resetForm,
   } = useEstudiantes();
 
   // Cargar las carreras desde el hook
@@ -71,10 +71,15 @@ export default function UsersPage() {
     const busca = searchTerm.toLowerCase();
     const matchesSearch =
       nombreCompleto.includes(busca) ||
-      estudiante.student_id_card.toString().includes(busca);
+      estudiante.student_id_card.includes(busca);
     const matchesCarrera =
       filterCarrera === "all" ||
-      estudiante.career_year === Number(filterCarrera);
+      carreras.find((carrera) => carrera.id === estudiante.career?.id)?.id ===
+        Number(filterCarrera) ||
+      // Asegurarse de que el estudiante tenga una carrera definida
+      (estudiante.career && estudiante.career.id) === Number(filterCarrera) ||
+      // Si no hay carrera definida, verificar si el filtro es "all"
+      (estudiante.career === null && filterCarrera === "all");
     const matchesAño =
       filterAño === "all" || estudiante.career_year.toString() === filterAño;
     return matchesSearch && matchesCarrera && matchesAño;
@@ -312,17 +317,15 @@ export default function UsersPage() {
                   <SelectValue placeholder="Todas las carreras" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las carreras</SelectItem>
-                  <SelectItem value="Arquitectura">Arquitectura</SelectItem>
-                  <SelectItem value="Ingeniería en Sistemas">
-                    Ing. Sistemas
-                  </SelectItem>
-                  <SelectItem value="Ingeniería Civil">Ing. Civil</SelectItem>
-                  <SelectItem value="Ingeniería Industrial">
-                    Ing. Industrial
-                  </SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {carreras.map((carrera) => (
+                    <SelectItem key={carrera.id} value={String(carrera.id)}>
+                      {carrera.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+
               <Select value={filterAño} onValueChange={setFilterAño}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue placeholder="Todos los años" />

@@ -2,7 +2,7 @@ export type StudentType = {
   id: number
   name: string
   lastname: string
-  student_id_card: number
+  student_id_card: string
   career_year: number
   gender: string
   email: string
