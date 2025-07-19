@@ -4,6 +4,6 @@ export type UserType = {
     id: number;                    
     name: string;
     email: string;
-    role: 'SuperUser' | 'Cordinator' | 'Admin'; 
+    role: string; // "Estudiante" | "Profesor" | "Administrador" 
     student?: StudentType;         
   };

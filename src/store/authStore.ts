@@ -12,8 +12,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
 
   login: () => {
-    localStorage.setItem("isManualAuth", "true");
-    set({ isAuthenticated: true });
+    const token = localStorage.getItem("token");
+    if (token) {
+      set({ isAuthenticated: true });
+    } else {
+      set({ isAuthenticated: false });
+    }
   },
 
   logout: () => {
@@ -23,6 +27,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   initializeAuth: () => {
     const token = localStorage.getItem("token");
-    set({ isAuthenticated: !!token });
+    if (token) {
+      set({ isAuthenticated: true });
+    } else {
+      set({ isAuthenticated: false });
+    }
   },
 }));
