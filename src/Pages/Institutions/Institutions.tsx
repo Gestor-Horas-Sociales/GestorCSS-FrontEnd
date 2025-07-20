@@ -261,7 +261,7 @@ export default function Institutions() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                    <div className="flex flex-col border w-full">
+                    <div className="flex flex-col">
                       <FormSelectField
                         formField={form}
                         nameField="departament_id"
@@ -273,7 +273,7 @@ export default function Institutions() {
                         }))}
                       />
                     </div>
-                    <div className="flex flex-col border">
+                    <div className="flex flex-col">
                       <FormSelectField
                         formField={form}
                         disabled={idDepartament === 0}
