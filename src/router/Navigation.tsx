@@ -28,6 +28,7 @@ const Navigation = () => {
             path: "/",
             element: <MainLayout />,
             children: [
+              { index: true, element: <Navigate to="/dashboard" replace /> },
               { path: "dashboard", element: <DashboardPage /> },
               { path: "users/*", element: <UsersPage /> },
               { path: "institutions/*", element: <Institutions /> },
