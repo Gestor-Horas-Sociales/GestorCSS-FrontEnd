@@ -241,8 +241,8 @@ export default function Institutions() {
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(insertInstitution)}>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                     <div className="flex flex-col">
                       <FormTextField
                         formField={form}
@@ -260,26 +260,26 @@ export default function Institutions() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="flex flex-col">
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <div className="flex flex-col border w-full">
                       <FormSelectField
                         formField={form}
                         nameField="departament_id"
                         label="Departamento"
-                        placeholder="Seleccione un departamento"
+                        placeholder="Seleccione departamento"
                         listRender={departaments.map((departament) => ({
                           key: departament.id.toString(),
                           textRender: departament.name,
                         }))}
                       />
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col border">
                       <FormSelectField
                         formField={form}
                         disabled={idDepartament === 0}
                         nameField="district_id"
                         label="Distrito"
-                        placeholder="Seleccione un distrito"
+                        placeholder="Seleccione distrito"
                         listRender={departamentsDistrict.map((district) => ({
                           key: district.id.toString(),
                           textRender: district.name,
@@ -287,7 +287,7 @@ export default function Institutions() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                     <div className="flex flex-col">
                       <FormTextField
                         formField={form}
