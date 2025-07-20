@@ -12,13 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -101,199 +95,241 @@ export default function UsersPage() {
             Administración de estudiantes, coordinadores y datos del sistema
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-4">
           <Dialog
             open={isNewUserModalOpen}
             onOpenChange={(isOpen) => {
               setIsNewUserModalOpen(isOpen);
-              if (!isOpen) {
-                resetForm(); // 👈 Limpia el formulario al cerrar
-              }
+              if (!isOpen) resetForm();
             }}
           >
             <DialogTrigger asChild>
-              <Button className="rounded-2xl shadow-sm">
+              <Button className="rounded-xl px-6 py-2 shadow">
                 <UserPlus className="w-4 h-4 mr-2" />
                 Nuevo Usuario
               </Button>
             </DialogTrigger>
 
-            <DialogContent className="max-w-3xl rounded-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-semibold text-primary">
-                  Registrar Nuevo Usuario
-                </DialogTitle>
-              </DialogHeader>
+            <DialogContent className="max-w-3xl rounded-3xl p-0">
+              <Card className="rounded-3xl p-6">
+                <CardHeader className="text-center mb-4">
+                  <CardTitle className="text-2xl font-bold text-primary">
+                    Registrar Nuevo Usuario
+                  </CardTitle>
+                </CardHeader>
 
-              <form className="space-y-6" onSubmit={handleSubmit}>
-                {error && <div className="text-red-500 text-sm">{error}</div>}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {error && <div className="text-red-500 text-sm">{error}</div>}
 
-                {/* Nombre y Apellido */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    className="rounded-2xl"
-                    name="name"
-                    placeholder="Nombre"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <Input
-                    className="rounded-2xl"
-                    name="lastname"
-                    placeholder="Apellido"
-                    value={formData.lastname}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+                  {/* Sección: Datos Personales */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">
+                      Datos Personales
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Input
+                        name="name"
+                        placeholder="Nombre"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                        className="rounded-xl"
+                      />
+                      <Input
+                        name="lastname"
+                        placeholder="Apellido"
+                        value={formData.lastname}
+                        onChange={handleInputChange}
+                        required
+                        className="rounded-xl"
+                      />
+                      <Input
+                        name="student_id_card"
+                        placeholder="Carnet de Estudiante"
+                        value={formData.student_id_card}
+                        onChange={handleInputChange}
+                        type="number"
+                        required
+                        className="rounded-xl"
+                      />
+                      <Input
+                        name="email"
+                        placeholder="Correo Electrónico"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        type="email"
+                        required
+                        className="rounded-xl"
+                      />
+                    </div>
+                  </div>
 
-                {/* Carnet y Email */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    className="rounded-2xl"
-                    type="number"
-                    name="student_id_card"
-                    placeholder="Carnet de estudiante"
-                    value={formData.student_id_card}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <Input
-                    className="rounded-2xl"
-                    type="email"
-                    name="email"
-                    placeholder="Correo electrónico"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+                  {/* Sección: Información Académica */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">
+                      Información Académica
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                      <Select
+                        value={formData.career_id.toString()}
+                        onValueChange={(val) =>
+                          handleSelectChange("career_id", val)
+                        }
+                      >
+                        <SelectTrigger className="rounded-xl w-full truncate">
+                          <SelectValue placeholder="Carrera" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {carreras.map((carrera) => (
+                            <SelectItem
+                              key={carrera.id}
+                              value={String(carrera.id)}
+                            >
+                              {carrera.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div>
+                        <h3>Año Académico</h3>
+                        <Select
+                          value={formData.career_year.toString()}
+                          onValueChange={(val) =>
+                            handleSelectChange("career_year", val)
+                          }
+                        >
+                          <SelectTrigger className="rounded-xl">
+                            <SelectValue placeholder="Año académico" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5].map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}° Año
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                {/* Carrera, Año de inicio y Género */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Select
-                    value={formData.career_id.toString()}
-                    onValueChange={(val) =>
-                      handleSelectChange("career_id", val)
-                    }
-                  >
-                    <SelectTrigger className="rounded-2xl">
-                      <SelectValue placeholder="Carrera" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {carreras.map((carrera) => (
-                        <SelectItem key={carrera.id} value={String(carrera.id)}>
-                          {carrera.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <Select
+                        value={formData.gender}
+                        onValueChange={(val) =>
+                          handleSelectChange("gender", val)
+                        }
+                      >
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="Género" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="M">Masculino</SelectItem>
+                          <SelectItem value="F">Femenino</SelectItem>
+                          <SelectItem value="O">Otro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-                  <Select
-                    value={formData.career_year.toString()}
-                    onValueChange={(val) =>
-                      handleSelectChange("career_year", val)
-                    }
-                  >
-                    <SelectTrigger className="rounded-2xl">
-                      <SelectValue placeholder="Año de Inicio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5].map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}° Año
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {/* Sección: Información Adicional */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">
+                      Información Adicional
+                    </h3>
 
-                  <Select
-                    value={formData.gender}
-                    onValueChange={(val) => handleSelectChange("gender", val)}
-                  >
-                    <SelectTrigger className="rounded-2xl">
-                      <SelectValue placeholder="Género" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="M">Masculino</SelectItem>
-                      <SelectItem value="F">Femenino</SelectItem>
-                      <SelectItem value="O">Otro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Horas Internas */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-base font-semibold">
+                          Horas Internas
+                        </label>
+                        <Input
+                          type="number"
+                          name="internal_hours"
+                          placeholder="Horas Internas"
+                          value={formData.internal_hours}
+                          onChange={handleInputChange}
+                          className="rounded-xl w-full"
+                        />
+                      </div>
+                      {/* Estado (Select) */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-base font-semibold">
+                          Estado
+                        </label>
+                        <Select
+                          value={formData.active.toString()}
+                          onValueChange={(val) =>
+                            handleSelectChange("active", val)
+                          }
+                        >
+                          <SelectTrigger className="rounded-xl w-full">
+                            <SelectValue placeholder="Estado" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">Activo</SelectItem>
+                            <SelectItem value="false">Inactivo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* Horas Externas */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-base font-semibold">
+                          Horas Externas
+                        </label>
+                        <Input
+                          type="number"
+                          name="external_hours"
+                          placeholder="Horas Externas"
+                          value={formData.external_hours}
+                          onChange={handleInputChange}
+                          className="rounded-xl w-full"
+                        />
+                      </div>
 
-                {/* Estado, Horas internas y externas */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Select
-                    value={formData.active.toString()}
-                    onValueChange={(val) => handleSelectChange("active", val)}
-                  >
-                    <SelectTrigger className="rounded-2xl">
-                      <SelectValue placeholder="Estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">Activo</SelectItem>
-                      <SelectItem value="false">Inactivo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                      {/* Dirección */}
+                      <div className="flex flex-col gap-2 sm:col-span-2">
+                        <label className="text-base font-semibold">
+                          Dirección
+                        </label>
+                        <Input
+                          name="address"
+                          placeholder="Dirección"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          className="rounded-xl w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                  <Input
-                    className="rounded-2xl"
-                    type="number"
-                    name="internal_hours"
-                    placeholder="Horas Internas"
-                    value={formData.internal_hours}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <Input
-                    className="rounded-2xl"
-                    type="number"
-                    name="external_hours"
-                    placeholder="Horas Externas"
-                    value={formData.external_hours}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div>
-                  <Input
-                    className="rounded-2xl"
-                    name="address"
-                    placeholder="Dirección"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                {/* Botones */}
-                <div className="flex justify-end gap-2 pt-4 border-t mt-6">
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => setIsNewUserModalOpen(false)}
-                    className="rounded-2xl"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" className="rounded-2xl shadow-md">
-                    Registrar Usuario
-                  </Button>
-                </div>
-              </form>
+                  {/* Acciones */}
+                  <div className="flex justify-end gap-2 pt-4 border-t mt-6">
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => setIsNewUserModalOpen(false)}
+                      className="rounded-xl"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" className="rounded-xl shadow-md">
+                      Registrar Usuario
+                    </Button>
+                  </div>
+                </form>
+              </Card>
             </DialogContent>
           </Dialog>
 
-          <Button variant="outline" className="rounded-2xl">
-            <Upload className="w-4 h-4 mr-2" />
-            Importar Excel
-          </Button>
-
-          <Button variant="outline" className="rounded-2xl">
-            <Download className="w-4 h-4 mr-2" />
-            Exportar
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" className="rounded-xl">
+              <Upload className="w-4 h-4 mr-2" />
+              Importar Excel
+            </Button>
+            <Button variant="outline" className="rounded-xl">
+              <Download className="w-4 h-4 mr-2" />
+              Exportar
+            </Button>
+          </div>
         </div>
       </div>
       <Card>

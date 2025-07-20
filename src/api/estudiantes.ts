@@ -16,8 +16,12 @@ export const createEstudiante = (data: Omit<StudentType, "id">) =>
   api.post<StudentType>("/students", data);
 
 // Actualizar un estudiante existente
-export const updateEstudiante = (id: string, data: Partial<StudentType>) =>
-  api.put<StudentType>(`/students/${id}`, data);
+export const updateEstudiante = (id: string, data: Partial<StudentType>) =>{
+  console.log("datos:", data);
+  delete data.id; 
+  console.log("datos sin id:", data);
+  return api.patch<StudentType>(`/students/${id}`, data);
+}
 
 // Eliminar un estudiante por ID
 export const deleteEstudiante = (id: string) =>

@@ -109,15 +109,15 @@ export const useEstudiantes = () => {
       let response;
 
       if (esEdicion) {
-        console.log("Editando estudiante:", formData);
-        // PUT si es edición
         if (formData.id !== undefined) {
-          response = await updateEstudiante(formData.id.toString(), formData);
+            response = await updateEstudiante(
+            formData.id.toString(),
+            prepararDatosEstudiante(formData)
+            );
         } else {
           throw new Error("formData.id is undefined");
         }
       } else {
-        // POST si es nuevo
         response = await createEstudiante(prepararDatosEstudiante(formData));
       }
 

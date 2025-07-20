@@ -13,6 +13,6 @@ export type StudentType = {
     id: number
     name: string
   }
-  internal_hours: number
-  external_hours: number
+  internal_hours?: number
+  external_hours?: number
 }
