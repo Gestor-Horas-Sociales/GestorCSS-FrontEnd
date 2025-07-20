@@ -2,7 +2,12 @@ import type {
   InstitutionType,
   InstitutionSchema,
 } from "@/Types/InstitutionType";
-import { getInstitutions, deleteInstitution } from "@/api/institutions";
+import {
+  getInstitutions,
+  deleteInstitution,
+  updateInstitution,
+  createInstitution,
+} from "@/api/institutions";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -30,11 +35,30 @@ export const useInstitutions = () => {
 
   const insertInstitution = async (data: z.infer<typeof InstitutionSchema>) => {
     setLoading(true);
-
-    console.log("Insertando institución:", data);
-    console.log("Active Edit:", activeEdit);
     try {
-      toast.success("Institución creada exitosamente");
+      if (activeEdit) {
+        const response = await updateInstitution(Number(data.id), {
+          name: data.name,
+          email: data.email,
+          district_id: data.district_id,
+          address: data.address,
+          phone: data.phone,
+        });
+        setActiveEdit(false);
+        setOpen(false);
+        toast.success(response.data.message);
+      } else {
+        const response = await createInstitution({
+          name: data.name,
+          email: data.email,
+          district_id: data.district_id,
+          address: data.address ? data.address : "",
+          phone: data.phone ? data.phone : "",
+        });
+
+        toast.success(response.data.message);
+        setOpen(false);
+      }
     } catch (error: unknown) {
       console.error("Error al crear la institución:", error);
       const err = error as AxiosError<{ message?: string }>;

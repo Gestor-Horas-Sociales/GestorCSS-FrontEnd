@@ -1,4 +1,4 @@
-import type { InstitutionType } from "@/Types/InstitutionType";
+import type { InstitutionType, InstitutionPayload } from "@/Types/InstitutionType";
 import { api } from "./axios";
 
 // Obtener todas las instituciones
@@ -12,11 +12,11 @@ export const getInstitutionById = (id: string) =>
   api.get<InstitutionType>(`/institutions/${id}`);
 
 // Crear una nueva institución
-export const createInstitution = (data: Omit<InstitutionType, "id">) =>
-  api.post<InstitutionType>("/institutions", data);
+export const createInstitution = (data: Omit<InstitutionPayload, "id">) =>
+  api.post<InstitutionPayload>("/institutions", data);
 
 // Actualizar una institución existente
-export const updateInstitution = (id: string, data: Partial<InstitutionType>) =>
+export const updateInstitution = (id: number, data: Partial<InstitutionType>) =>
   api.patch<InstitutionType>(`/institutions/${id}`, data);
 
 // Eliminar una institución por ID

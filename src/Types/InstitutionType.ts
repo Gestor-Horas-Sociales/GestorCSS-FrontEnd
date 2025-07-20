@@ -7,11 +7,21 @@ export interface InstitutionType {
   address: string;
   email: string;
   phone: string;
+  message?: string;
   createdAt?: string;
   updatedAt?: string;
   district_id: number;
   district: District;
 }
+
+export type InstitutionPayload = {
+  name: string;
+  email: string;
+  district_id: number;
+  address?: string;
+  phone?: string;
+  message?: string;
+};
 
 export const InstitutionSchema = z.object({
   id: z.number().optional(),

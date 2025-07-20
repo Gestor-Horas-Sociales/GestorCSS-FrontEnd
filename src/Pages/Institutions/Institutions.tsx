@@ -76,6 +76,7 @@ export default function Institutions() {
 
   const editInstitution = useCallback(
     (
+      id: number,
       name: string,
       email: string,
       district_id: number,
@@ -87,6 +88,7 @@ export default function Institutions() {
       setActiveEdit(true);
 
       form.reset({
+        id,
         name,
         email,
         district_id,
@@ -98,6 +100,13 @@ export default function Institutions() {
     [form, setOpen, setActiveEdit]
   );
   const columns: ColumnDef<InstitutionType>[] = [
+    {
+      accessorKey: "id",
+      header: "ID",
+      meta: {
+        label: "ID",
+      },
+    },
     {
       accessorKey: "name",
       header: "Nombre",
@@ -143,6 +152,7 @@ export default function Institutions() {
             className="cursor-pointer"
             onClick={() => {
               editInstitution(
+                row.original.id,
                 row.original.name,
                 row.original.email,
                 row.original.district.id,
