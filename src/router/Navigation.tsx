@@ -12,9 +12,10 @@ import SettingsPage from "@/Pages/Settings/SettingsPage";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect } from "react";
 import Institutions from "@/Pages/Institutions/Institutions";
+import Spinner from "@/components/Spinner";
 
 const Navigation = () => {
-  const { initializeAuth, isAuthenticated } = useAuthStore();
+  const { initializeAuth, isAuthenticated, isLoading } = useAuthStore();
 
   useEffect(() => {
     initializeAuth();
@@ -44,6 +45,10 @@ const Navigation = () => {
           { path: "*", element: <Navigate to="/login" replace /> },
         ]
   );
+
+  if (isLoading) {
+    return <Spinner />;
+  }
 
   return routes;
 };
