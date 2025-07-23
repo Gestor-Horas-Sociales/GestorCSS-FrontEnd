@@ -103,7 +103,6 @@ export default function HoursPage() {
 
 
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
-  const [idDelete]
 
   const [isNewRecordModalOpen, setIsNewRecordModalOpen] = useState(false);
   const [filterEstado, setFilterEstado] = useState("");

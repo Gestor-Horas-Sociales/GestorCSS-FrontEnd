@@ -4,12 +4,12 @@ import type * as React from "react";
 import {
   BookOpen,
   Command,
-  Settings2,
   SquareTerminal,
   Users,
   Clock,
   FileText,
-  Building
+  Building,
+  BookUser,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -40,22 +40,14 @@ const data = {
       ],
     },
     {
-      title: "Gestión de Usuarios",
-      url: "/users",
+      title: "Estudiantes",
+      url: "/students",
       icon: Users,
-      items: [
-        { title: "Estudiantes", url: "/users/students" },
-        { title: "Coordinadores", url: "/users/coordinators" },
-        { title: "Importar Datos", url: "/users/import" },
-      ],
     },
     {
       title: "Instituciones",
       url: "/institutions",
       icon: Building,
-      items: [
-        { title: "Instituciones", url: "/institutions" },
-      ],
     },
     {
       title: "Proyectos",
@@ -88,15 +80,10 @@ const data = {
       ],
     },
     {
-      title: "Configuración",
-      url: "/settings",
-      icon: Settings2,
-      items: [
-        { title: "Departamentos", url: "/settings/departments" },
-        { title: "Carreras", url: "/settings/careers" },
-        { title: "Instituciones", url: "/settings/institutions" },
-      ],
-    },
+      title: "Gestión de Usuarios",
+      url: "/users",
+      icon: BookUser,
+    }
   ],
 };
 
