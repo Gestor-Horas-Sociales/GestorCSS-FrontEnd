@@ -1,156 +1,127 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import { z } from "zod";
+import { AxiosError } from "axios";
+import { StudentSchema } from "@/Types/StudentType";
+import type { StudentType } from "@/Types/StudentType";
 import {
   getEstudiantes,
+  getEstudianteById,
   createEstudiante,
   deleteEstudiante,
+  updateEstudiante,
 } from "@/api/estudiantes";
-import type { StudentType } from "@/Types/StudentType";
-import { getEstudianteById, updateEstudiante } from "@/api/estudiantes";
 
 export const useEstudiantes = () => {
   const [estudiantes, setEstudiantes] = useState<StudentType[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterCarrera, setFilterCarrera] = useState("all");
-  const [filterAño, setFilterAño] = useState("all");
-  const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
-  const [error, setError] = useState("");
+  const [currentEstudiante, setCurrentEstudiante] = useState<StudentType | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [activeEdit, setActiveEdit] = useState(false);
 
-  // FormData con career_id explícito, sin career ni location
-  type FormDataType = Omit<StudentType, "id" | "career"> & { career_id: number; id?: number };
-
-  const [formData, setFormData] = useState<FormDataType>({
-    name: "",
-    lastname: "",
-    email: "",
-    career_year: new Date().getFullYear(),
-    gender: "",
-    active: true,
-    internal_hours: 0,
-    external_hours: 0,
-    student_id_card: "",
-    district_id: 1,
-    address: "",
-    career_id: 1,
-  });
-
-  useEffect(() => {
-    const fetchEstudiantes = async () => {
-      try {
-        const data = await getEstudiantes();
-        setEstudiantes(data);
-      } catch (error) {
-        console.error("Error al cargar estudiantes:", error);
-      }
-    };
-    fetchEstudiantes();
+  // Cargar todos los estudiantes
+  const getAllStudents = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getEstudiantes();
+      setEstudiantes(data);
+    } catch (error) {
+      console.error("Error al cargar estudiantes:", error);
+      toast.error("Error al cargar la lista de estudiantes");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]:
-        e.target.type === "number" ? Number(e.target.value) : e.target.value,
-    });
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({
-      ...formData,
-      [name]:
-        name === "career_id" || name === "district_id" || name === "career_year"
-          ? Number(value)
-          : value,
-    });
-  };
-
-  // Reset form limpio
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      lastname: "",
-      email: "",
-      career_year: new Date().getFullYear(),
-      gender: "",
-      active: true,
-      internal_hours: 0,
-      external_hours: 0,
-      student_id_card: "",
-      district_id: 1,
-      address: "",
-      career_id: 1,
-      id: undefined,
-    });
-    setError("");
-  };
-
-  const prepararDatosEstudiante = (formData: FormDataType) => ({
-    id: formData.id && formData.id > 0 ? formData.id : undefined,
-    name: formData.name || "",
-    lastname: formData.lastname || "",
-    email: formData.email || "",
-    internal_hours: Number(formData.internal_hours) || 0,
-    external_hours: Number(formData.external_hours) || 0,
-    student_id_card: String(formData.student_id_card || ""),
-    gender: formData.gender,
-    career_year: Number(formData.career_year) || 1,
-    career_id: Number(formData.career_id) || 1,
-    active: Boolean(formData.active),
-    address: formData.address || "",
-    district_id: Number(formData.district_id) || 1,
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
+  // Cargar un estudiante específico por ID
+  const loadEstudiante = useCallback(async (id: number) => {
+    setLoading(true);
     try {
-      const esEdicion = !!formData.id && formData.id > 0;
-
-      let response;
-
-      if (esEdicion) {
-        if (formData.id !== undefined) {
-            response = await updateEstudiante(
-            formData.id.toString(),
-            prepararDatosEstudiante(formData)
-            );
-        } else {
-          throw new Error("formData.id is undefined");
-        }
-      } else {
-        response = await createEstudiante(prepararDatosEstudiante(formData));
-      }
-
-      const estudianteActualizado = response.data;
-
-      setEstudiantes((prev) =>
-        esEdicion
-          ? prev.map((est) =>
-            est.id === formData.id ? estudianteActualizado : est
-          )
-          : [...prev, estudianteActualizado]
-      );
-
-      setIsNewUserModalOpen(false);
-      resetForm();
-    } catch (err) {
-      console.error("Fallo en el registro:", err);
-      setError("Ocurrió un error al registrar o actualizar el estudiante");
+      const response = await getEstudianteById(id.toString());
+      setCurrentEstudiante(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error al cargar estudiante:", error);
+      toast.error("Error al cargar datos del estudiante");
+      return null;
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar este estudiante?")) {
-      return;
-    }
+  // Eliminar estudiante
+  const handleDeleteEstudiante = async (id: number) => {
+    setLoading(true);
     try {
       await deleteEstudiante(id.toString());
-      setEstudiantes(estudiantes.filter((estudiante) => estudiante.id !== id));
-    } catch (error) {
-      console.error("Error al eliminar estudiante:", error);
-      setError("Ocurrió un error al eliminar el estudiante");
+      toast.success("Estudiante eliminado correctamente");
+      await getAllStudents();
+    } catch (err) {
+      console.error("Error al eliminar el estudiante:", err);
+      toast.error("Error al eliminar el estudiante");
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Preparar formulario para edición
+  const prepareEdit = async (id: number) => {
+    const estudiante = await loadEstudiante(id);
+    if (estudiante) {
+      setOpen(true);
+      setActiveEdit(true);
+    }
+  };
+
+  // Insertar o actualizar estudiante
+  const insertStudent = async (data: z.infer<typeof StudentSchema>) => {
+    setLoading(true);
+    try {
+      const payload = {
+        name: data.name,
+        lastname: data.lastname,
+        email: data.email,
+        career_year: data.career_year,
+        gender: data.gender || "",
+        active: data.active ?? false,
+        internal_hours: data.internal_hours ?? 0,
+        external_hours: data.external_hours ?? 0,
+        address: data.address ?? "",
+        district_id: data.district_id,
+        student_id_card: data.student_id_card ?? "",
+        career_id: data.career?.career_id ?? 0,
+      };
+
+      if (activeEdit && data.id) {
+        await updateEstudiante(data.id.toString(), payload);
+        toast.success("Estudiante actualizado correctamente");
+      } else {
+        await createEstudiante(payload);
+        toast.success("Estudiante creado correctamente");
+      }
+
+      setOpen(false);
+      setActiveEdit(false);
+      await getAllStudents();
+    } catch (err: unknown) {
+      console.error("Error al insertar o actualizar el estudiante:", err);
+      const error = err as AxiosError<{ message?: string }>;
+      toast.error(error.response?.data?.message || "Ocurrió un error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resetear el estado al cerrar el modal
+  const handleCloseModal = () => {
+    setOpen(false);
+    setActiveEdit(false);
+    setCurrentEstudiante(null);
+  };
+
+  useEffect(() => {
+    getAllStudents();
+  }, [getAllStudents]);
 
   const calcularHoras = (estudiante: StudentType) => {
     const horasInternas = estudiante.internal_hours || 0;
@@ -164,57 +135,18 @@ export const useEstudiantes = () => {
     return { horasCompletadas, horasRequeridas, porcentaje };
   };
 
-  const fetchEstudianteById = async (id: number) => {
-    try {
-      const estudiante = await getEstudianteById(id.toString());
-      return estudiante;
-    } catch (error) {
-      console.error("Error al obtener estudiante:", error);
-      return null;
-    }
-  };
-
-  // Carga datos en formData para editar
-  const startEdit = (estudiante: StudentType) => {
-    setFormData({
-      id: estudiante.id,
-      name: estudiante.name,
-      lastname: estudiante.lastname,
-      email: estudiante.email,
-      student_id_card: estudiante.student_id_card,
-      gender: estudiante.gender || "",
-      active: estudiante.active,
-      internal_hours: estudiante.internal_hours,
-      external_hours: estudiante.external_hours,
-      address: estudiante.address || "",
-      district_id: estudiante.district_id || 1,
-      career_year: estudiante.career_year,
-      career_id: estudiante.career?.id || 1,
-    });
-    setIsNewUserModalOpen(true);
-  };
-
   return {
     estudiantes,
-    searchTerm,
-    setSearchTerm,
-    filterCarrera,
-    setFilterCarrera,
-    filterAño,
-    setFilterAño,
-    isNewUserModalOpen,
-    setIsNewUserModalOpen,
-    formData,
-    setFormData,
-    error,
-    handleInputChange,
-    handleSelectChange,
-    handleSubmit,
-    handleDelete,
-    calcularHoras,
-    fetchEstudianteById,
-    startEdit,
-    prepararDatosEstudiante,
-    resetForm
+    currentEstudiante,
+    loading,
+    open,
+    setOpen,
+    activeEdit,
+    setActiveEdit,
+    handleDeleteEstudiante,
+    insertStudent,
+    prepareEdit,
+    handleCloseModal,
+    calcularHoras
   };
 };

@@ -6,7 +6,7 @@ import {
   FormLabel,
   FormMessage,
 } from "./ui/form";
-import type { FieldValues } from "react-hook-form";
+import type { FieldValues, Path } from "react-hook-form";
 import {
   Select,
   SelectContent,
@@ -21,8 +21,13 @@ export interface ListRender {
   textRender: string;
 }
 
-interface Props<T extends FieldValues> extends TextFieldType<T> {
+interface Props<T extends FieldValues> extends Omit<TextFieldType<T>, 'type'> {
   listRender: ListRender[];
+  valueType?: "number" | "string" | "boolean" ;
+  className?: string;
+  defaultValue?: any;
+  rules?: any;
+  shouldUnregister?: boolean;
 }
 
 export default function FormSelectField<T extends FieldValues>({
@@ -30,14 +35,32 @@ export default function FormSelectField<T extends FieldValues>({
   nameField,
   label,
   placeholder,
-  disabled,
+  disabled = false,
+  className,
+  listRender,
+  valueType = "number", // Mantenemos number como default por compatibilidad
   defaultValue,
   rules,
   shouldUnregister,
-  className,
-  listRender,
-  ...rest
 }: Props<T>) {
+  const parseValue = (value: string) => {
+    if (value === "") return null;
+    
+    switch (valueType) {
+      case "number":
+        return Number(value);
+      case "boolean":
+        return value === "true";
+      default:
+        return value;
+    }
+  };
+
+  const formatValue = (value: unknown): string => {
+    if (value === undefined || value === null) return "";
+    return String(value);
+  };
+
   return (
     <FormField
       defaultValue={defaultValue}
@@ -45,28 +68,27 @@ export default function FormSelectField<T extends FieldValues>({
       rules={rules}
       shouldUnregister={shouldUnregister}
       control={formField.control}
-      name={nameField}
+      name={nameField as Path<T>}
       render={({ field }) => (
         <FormItem>
           <FormLabel
-            htmlFor={`select-${nameField}`}
+            htmlFor={`select-${String(nameField)}`}
             className={cn(
-              formField.formState.errors[nameField] ? "text-red-600" : ""
+              formField.formState.errors[nameField] && "text-red-600"
             )}
           >
             {label}
           </FormLabel>
           <Select
-            onValueChange={(value) => field.onChange(Number(value))}
-            value={field.value?.toString()} // convierte a string para el Select
-            defaultValue={field.value?.toString()}
+            onValueChange={(value) => field.onChange(parseValue(value))}
+            value={formatValue(field.value)}
+            defaultValue={formatValue(field.value)}
             disabled={disabled}
           >
             <FormControl
               className={`focus:ring-primary dark:border-primary-dark ${className}`}
-              {...rest}
             >
-              <SelectTrigger id={`select-${nameField}`} className="w-full">
+              <SelectTrigger id={`select-${String(nameField)}`} className="w-full">
                 <SelectValue placeholder={placeholder} />
               </SelectTrigger>
             </FormControl>

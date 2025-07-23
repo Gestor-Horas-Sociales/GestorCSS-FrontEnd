@@ -42,6 +42,8 @@ import {
   Edit,
 } from "lucide-react";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
+import { useHoursRecord } from "@/hooks/use-hours";
+import { useInstitutions } from "@/hooks/use-institutions";
 
 // Datos de ejemplo
 const registrosHoras = [
@@ -87,6 +89,22 @@ const registrosHoras = [
 ];
 
 export default function HoursPage() {
+  const {
+    hours,
+    loading,
+    open,
+    setOpen,
+    activeEdit,
+    setActiveEdit,
+    handleDeleteHoursRecord,
+    insertHoursRecord,
+    getAllHoursRecord: fetchAllHours,
+  } = useHoursRecord();
+
+
+  const [openAlertDelete, setOpenAlertDelete] = useState(false);
+  const [idDelete]
+
   const [isNewRecordModalOpen, setIsNewRecordModalOpen] = useState(false);
   const [filterEstado, setFilterEstado] = useState("");
   const [filterTipoHoras, setFilterTipoHoras] = useState("");

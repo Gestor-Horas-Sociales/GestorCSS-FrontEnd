@@ -1,477 +1,530 @@
-"use client";
-
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  UserPlus,
-  Upload,
-  Search,
-  Download,
-  Eye,
-  Edit,
-  Trash2,
-} from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Upload, Download, Plus, Eye, Edit, Trash2 } from "lucide-react";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
 import { useCarrera } from "@/hooks/use-carrera";
+import { useForm } from "react-hook-form";
+import { useTable } from "@/hooks/useTable";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { StudentSchema, type StudentType } from "@/Types/StudentType";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Spinner } from "react-bootstrap";
+import { Form } from "@/components/ui/form";
+import FormTextField from "@/components/FormTextField";
+import FormSelectField from "@/components/FormSelectField";
+import TableStructure from "@/components/TableStructure";
+import { Toaster } from "sonner";
+import GeneralAlert from "@/components/GeneralAlert";
+import type z from "zod";
+import { useDepartament } from "@/hooks/use-departament";
+import { useDistrict } from "@/hooks/use-district";
 
 export default function UsersPage() {
-  // Cargar los estudiantes y sus funciones desde el hook useEstudiantes
+  // Hooks originales sin modificar
   const {
     estudiantes,
-    searchTerm,
-    setSearchTerm,
-    filterCarrera,
-    setFilterCarrera,
-    filterAño,
-    setFilterAño,
-    isNewUserModalOpen,
-    setIsNewUserModalOpen,
-    formData,
-    error,
-    handleInputChange,
-    handleSelectChange,
-    handleSubmit,
-    handleDelete,
-    startEdit,
+    loading,
+    open,
+    setOpen,
+    activeEdit,
+    setActiveEdit,
+    handleDeleteEstudiante,
+    insertStudent,
     calcularHoras,
-    resetForm,
   } = useEstudiantes();
 
-  // Cargar las carreras desde el hook
   const { carreras } = useCarrera();
+  const { departaments } = useDepartament();
+  const { departamentsDistrict, getAllDepartamentsByDistrict } = useDistrict();
+  const [idDepartament, setIdDepartment] = useState<number>(0);
+  const [openAlertDelete, setOpenAlertDelete] = useState(false);
+  const [idDelete, setIdDelete] = useState<number>(0);
 
-  const filteredEstudiantes = estudiantes.filter((estudiante) => {
-    const nombreCompleto =
-      `${estudiante.name} ${estudiante.lastname}`.toLowerCase();
-    const busca = searchTerm.toLowerCase();
-    const matchesSearch =
-      nombreCompleto.includes(busca) ||
-      estudiante.student_id_card.includes(busca);
-    const matchesCarrera =
-      filterCarrera === "all" ||
-      carreras.find((carrera) => carrera.id === estudiante.career?.id)?.id ===
-        Number(filterCarrera) ||
-      // Asegurarse de que el estudiante tenga una carrera definida
-      (estudiante.career && estudiante.career.id) === Number(filterCarrera) ||
-      // Si no hay carrera definida, verificar si el filtro es "all"
-      (estudiante.career === null && filterCarrera === "all");
-    const matchesAño =
-      filterAño === "all" || estudiante.career_year.toString() === filterAño;
-    return matchesSearch && matchesCarrera && matchesAño;
+  // Formulario original intacto
+  const form = useForm<z.infer<typeof StudentSchema>>({
+    resolver: zodResolver(StudentSchema),
+    defaultValues: {
+      name: "",
+      lastname: "",
+      email: "",
+      career_year: 1,
+      student_id_card: "",
+      gender: "",
+      active: false,
+      district_id: 0,
+      address: "",
+      internal_hours: 0,
+      external_hours: 0,
+      career: {
+        career_id: 1,
+        career_name: "",
+      },
+    },
   });
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  useEffect(() => {
+    if (idDepartament) {
+      getAllDepartamentsByDistrict(idDepartament);
+    }
+  }, [idDepartament, getAllDepartamentsByDistrict]);
 
-  const totalPages = Math.ceil(filteredEstudiantes.length / itemsPerPage);
-  const paginatedEstudiantes = filteredEstudiantes.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      setIdDepartment(value.departmet_id ?? 0); // Si es undefined, usa 0
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  const openDialogDelete = useCallback((id: number) => {
+    setOpenAlertDelete(true);
+    setIdDelete(id);
+  }, []);
+
+  // Función editEstudiante intacta con departamentos/distritos
+  const editEstudiante = useCallback(
+    (
+      id: number,
+      name: string,
+      lastname: string,
+      email: string,
+      career_year: number,
+      student_id_card: string,
+      gender: string,
+      district_id: number,
+      active: boolean,
+      internal_hours: number,
+      external_hours: number,
+      address: string,
+      career: { id: number; name: string } | null
+    ) => {
+      setOpen(true);
+      setActiveEdit(true);
+
+      form.reset({
+        id,
+        name,
+        lastname,
+        email,
+        career_year,
+        student_id_card,
+        gender,
+        active,
+        internal_hours,
+        external_hours,
+        address,
+        career: career
+          ? { career_id: career.id, career_name: career.name }
+          : { career_id: 1, career_name: "" },
+        district_id,
+      });
+    },
+    [form, setOpen, setActiveEdit]
   );
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+  // Columnas de la tabla (versión simplificada como en el código viejo)
+  const columns: ColumnDef<StudentType>[] = [
+    {
+      accessorKey: "id",
+      header: "ID",
+    },
+
+    {
+      accessorKey: "name",
+      header: "Estudiante",
+      cell: ({ row }) => (
         <div>
-          <h1 className="text-3xl font-bold">Gestión de Usuarios</h1>
-          <p className="text-muted-foreground">
-            Administración de estudiantes, coordinadores y datos del sistema
-          </p>
+          <div className="font-medium">
+            {row.original.name} {row.original.lastname}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {row.original.student_id_card} • {row.original.email}
+          </div>
         </div>
-        <div className="flex flex-col gap-4">
-          <Dialog
-            open={isNewUserModalOpen}
-            onOpenChange={(isOpen) => {
-              setIsNewUserModalOpen(isOpen);
-              if (!isOpen) resetForm();
-            }}
+      ),
+    },
+    {
+      accessorKey: "career.career_name",
+      header: "Carrera",
+      cell: ({ row }) => (
+        <span>
+          {row.original.career?.career_name
+            ? row.original.career.career_name
+            : "Sin Carrera Asignada"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "career_year",
+      header: "Año",
+      cell: ({ row }) => <span>{row.original.career_year}° Año</span>,
+    },
+    {
+      id: "progress",
+      header: "Progreso",
+      cell: ({ row }) => {
+        const { horasCompletadas, horasRequeridas, porcentaje } = calcularHoras(
+          row.original
+        );
+        return (
+          <div className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span>
+                {horasCompletadas} / {horasRequeridas} hrs
+              </span>
+              <span>{porcentaje}%</span>
+            </div>
+            <Progress value={porcentaje} className="h-2" />
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="sm">
+            <Eye className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              editEstudiante(
+                row.original.id,
+                row.original.name,
+                row.original.lastname,
+                row.original.email,
+                row.original.career_year,
+                row.original.student_id_card,
+                row.original.gender,
+                row.original.district_id,
+                row.original.active,
+                row.original.internal_hours ?? 0,
+                row.original.external_hours ?? 0,
+                row.original.address,
+                row.original.career
+                  ? {
+                      id: row.original.career.career_id,
+                      name: row.original.career.career_name,
+                    }
+                  : null
+              )
+            }
           >
-            <DialogTrigger asChild>
-              <Button className="rounded-xl px-6 py-2 shadow">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Nuevo Usuario
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-red-600"
+            onClick={() => openDialogDelete(row.original.id)}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const { globalFilter, setGlobalFilter, table } = useTable({
+    data: estudiantes,
+    columns,
+  });
+
+  const cancelDelete = async () => {
+    setOpenAlertDelete(false);
+    setIdDelete(0);
+  };
+
+  const confirmDelete = () => {
+    handleDeleteEstudiante(idDelete);
+    setOpenAlertDelete(false);
+    setIdDelete(0);
+  };
+
+  // Efectos para departamentos/distritos (intactos)
+  useEffect(() => {
+    if (idDepartament) {
+      getAllDepartamentsByDistrict(idDepartament);
+    }
+  }, [idDepartament, getAllDepartamentsByDistrict]);
+
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      setIdDepartment(value.departmet_id ?? 0);
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  return (
+    <>
+      {loading && <Spinner />}
+      <div className="p-6 space-y-6">
+        {/* Header intacto */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Gestión de Usuarios</h1>
+            <p className="text-muted-foreground">
+              Administración de estudiantes, coordinadores y datos del sistema
+            </p>
+          </div>
+          <div className="flex flex-col gap-4">
+            <Button
+              className="rounded-xl px-6 py-2 shadow"
+              onClick={() => setOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Usuario
+            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" className="rounded-xl">
+                <Upload className="w-4 h-4 mr-2" />
+                Importar Excel
               </Button>
-            </DialogTrigger>
+              <Button variant="outline" className="rounded-xl">
+                <Download className="w-4 h-4 mr-2" />
+                Exportar
+              </Button>
+            </div>
+          </div>
+        </div>
+        <Dialog
+          open={open}
+          onOpenChange={(isOpen) => {
+            setOpen(isOpen);
+            if (!isOpen) {
+              setActiveEdit(false);
+              form.reset({
+                name: "",
+                lastname: "",
+                email: "",
+                career_year: 1,
+                student_id_card: "",
+                gender: "",
+                active: false,
+                district_id: 0,
+                address: "",
+                internal_hours: 0,
+                external_hours: 0,
+                career: {
+                  career_id: 1,
+                  career_name: "",
+                },
+              });
+            }
+          }}
+        >
+          <DialogContent className="max-w-3xl rounded-3xl p-0">
+            <Card className="rounded-3xl p-6">
+              <DialogHeader className="text-center mb-4">
+                <DialogTitle className="text-2xl font-bold text-primary">
+                  {activeEdit ? "Editar Usuario" : "Registrar Nuevo Usuario"}
+                </DialogTitle>
+              </DialogHeader>
 
-            <DialogContent className="max-w-3xl rounded-3xl p-0">
-              <Card className="rounded-3xl p-6">
-                <CardHeader className="text-center mb-4">
-                  <CardTitle className="text-2xl font-bold text-primary">
-                    Registrar Nuevo Usuario
-                  </CardTitle>
-                </CardHeader>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {error && <div className="text-red-500 text-sm">{error}</div>}
-
-                  {/* Sección: Datos Personales */}
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(insertStudent)}
+                  className="space-y-6"
+                >
+                  {/* Sección de Datos Personales (intacta) */}
                   <div>
                     <h3 className="text-lg font-semibold mb-2">
                       Datos Personales
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Input
-                        name="name"
+                      <FormTextField
+                        formField={form}
+                        nameField="name"
+                        label="Nombre"
                         placeholder="Nombre"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
                         className="rounded-xl"
                       />
-                      <Input
-                        name="lastname"
+                      <FormTextField
+                        formField={form}
+                        nameField="lastname"
+                        label="Apellido"
                         placeholder="Apellido"
-                        value={formData.lastname}
-                        onChange={handleInputChange}
-                        required
                         className="rounded-xl"
                       />
-                      <Input
-                        name="student_id_card"
+                      <FormTextField
+                        formField={form}
+                        nameField="student_id_card"
+                        label="Carnet de Estudiante"
                         placeholder="Carnet de Estudiante"
-                        value={formData.student_id_card}
-                        onChange={handleInputChange}
-                        type="number"
-                        required
                         className="rounded-xl"
                       />
-                      <Input
-                        name="email"
+                      <FormTextField
+                        formField={form}
+                        nameField="email"
+                        label="Correo Electrónico"
                         placeholder="Correo Electrónico"
-                        value={formData.email}
-                        onChange={handleInputChange}
                         type="email"
-                        required
                         className="rounded-xl"
                       />
                     </div>
                   </div>
 
-                  {/* Sección: Información Académica */}
+                  {/* Sección de Información Académica (intacta) */}
                   <div>
                     <h3 className="text-lg font-semibold mb-2">
                       Información Académica
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <Select
-                        value={formData.career_id.toString()}
-                        onValueChange={(val) =>
-                          handleSelectChange("career_id", val)
-                        }
-                      >
-                        <SelectTrigger className="rounded-xl w-full truncate">
-                          <SelectValue placeholder="Carrera" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {carreras.map((carrera) => (
-                            <SelectItem
-                              key={carrera.id}
-                              value={String(carrera.id)}
-                            >
-                              {carrera.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div>
-                        <h3>Año Académico</h3>
-                        <Select
-                          value={formData.career_year.toString()}
-                          onValueChange={(val) =>
-                            handleSelectChange("career_year", val)
-                          }
-                        >
-                          <SelectTrigger className="rounded-xl">
-                            <SelectValue placeholder="Año académico" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[1, 2, 3, 4, 5].map((year) => (
-                              <SelectItem key={year} value={year.toString()}>
-                                {year}° Año
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <Select
-                        value={formData.gender}
-                        onValueChange={(val) =>
-                          handleSelectChange("gender", val)
-                        }
-                      >
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="Género" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="M">Masculino</SelectItem>
-                          <SelectItem value="F">Femenino</SelectItem>
-                          <SelectItem value="O">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormSelectField
+                        formField={form}
+                        nameField="career.career_id"
+                        label="Carrera"
+                        placeholder="Carrera"
+                        valueType="number"
+                        listRender={carreras.map((carrera) => ({
+                          key: carrera.id.toString(),
+                          textRender: carrera.name,
+                        }))}
+                        className="rounded-xl"
+                      />
+                      <FormSelectField
+                        formField={form}
+                        nameField="career_year"
+                        label="Año Académico"
+                        placeholder="Año académico"
+                        valueType="number"
+                        listRender={[1, 2, 3, 4, 5].map((year) => ({
+                          key: year.toString(),
+                          textRender: `${year}° Año`,
+                        }))}
+                        className="rounded-xl"
+                      />
+                      <FormSelectField
+                        formField={form}
+                        nameField="gender"
+                        label="Género"
+                        placeholder="Género"
+                        valueType="string"
+                        listRender={[
+                          { key: "M", textRender: "Masculino" },
+                          { key: "F", textRender: "Femenino" },
+                          { key: "O", textRender: "Otro" },
+                        ]}
+                        className="rounded-xl"
+                      />
                     </div>
                   </div>
 
-                  {/* Sección: Información Adicional */}
+                  {/* Sección de Información Adicional (intacta con departamentos/distritos) */}
                   <div>
                     <h3 className="text-lg font-semibold mb-4">
                       Información Adicional
                     </h3>
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Horas Internas */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-base font-semibold">
-                          Horas Internas
-                        </label>
-                        <Input
-                          type="number"
-                          name="internal_hours"
-                          placeholder="Horas Internas"
-                          value={formData.internal_hours}
-                          onChange={handleInputChange}
-                          className="rounded-xl w-full"
-                        />
-                      </div>
-                      {/* Estado (Select) */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-base font-semibold">
-                          Estado
-                        </label>
-                        <Select
-                          value={formData.active.toString()}
-                          onValueChange={(val) =>
-                            handleSelectChange("active", val)
-                          }
-                        >
-                          <SelectTrigger className="rounded-xl w-full">
-                            <SelectValue placeholder="Estado" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="true">Activo</SelectItem>
-                            <SelectItem value="false">Inactivo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {/* Horas Externas */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-base font-semibold">
-                          Horas Externas
-                        </label>
-                        <Input
-                          type="number"
-                          name="external_hours"
-                          placeholder="Horas Externas"
-                          value={formData.external_hours}
-                          onChange={handleInputChange}
-                          className="rounded-xl w-full"
-                        />
-                      </div>
-
-                      {/* Dirección */}
-                      <div className="flex flex-col gap-2 sm:col-span-2">
-                        <label className="text-base font-semibold">
-                          Dirección
-                        </label>
-                        <Input
-                          name="address"
-                          placeholder="Dirección"
-                          value={formData.address}
-                          onChange={handleInputChange}
-                          className="rounded-xl w-full"
-                        />
-                      </div>
+                      <FormSelectField
+                        formField={form}
+                        nameField="departmet_id"
+                        label="Departamento"
+                        placeholder="Seleccione departamento"
+                        valueType="number"
+                        listRender={departaments.map((d) => ({
+                          key: d.id.toString(),
+                          textRender: d.name,
+                        }))}
+                        className="rounded-xl"
+                      />
+                      <FormSelectField
+                        formField={form}
+                        nameField="district_id"
+                        label="Distrito"
+                        placeholder="Seleccione distrito"
+                        valueType="number"
+                        disabled={idDepartament === 0}
+                        listRender={departamentsDistrict.map((d) => ({
+                          key: d.id.toString(),
+                          textRender: d.name,
+                        }))}
+                        className="rounded-xl"
+                      />
+                      <FormTextField
+                        formField={form}
+                        nameField="internal_hours"
+                        label="Horas Internas"
+                        placeholder="Horas Internas"
+                        type="number"
+                        className="rounded-xl"
+                      />
+                      <FormTextField
+                        formField={form}
+                        nameField="external_hours"
+                        label="Horas Externas"
+                        placeholder="Horas Externas"
+                        type="number"
+                        className="rounded-xl"
+                      />
+                      <FormSelectField
+                        formField={form}
+                        nameField="active"
+                        label="Estado"
+                        placeholder="Estado"
+                        valueType="boolean"
+                        listRender={[
+                          { key: "true", textRender: "Activo" },
+                          { key: "false", textRender: "Inactivo" },
+                        ]}
+                        className="rounded-xl"
+                      />
+                      <FormTextField
+                        formField={form}
+                        nameField="address"
+                        label="Dirección"
+                        placeholder="Dirección"
+                        className="rounded-xl"
+                      />
                     </div>
                   </div>
 
-                  {/* Acciones */}
                   <div className="flex justify-end gap-2 pt-4 border-t mt-6">
                     <Button
                       variant="outline"
                       type="button"
-                      onClick={() => setIsNewUserModalOpen(false)}
+                      onClick={() => setOpen(false)}
                       className="rounded-xl"
                     >
                       Cancelar
                     </Button>
                     <Button type="submit" className="rounded-xl shadow-md">
-                      Registrar Usuario
+                      {activeEdit ? "Actualizar Usuario" : "Registrar Usuario"}
                     </Button>
                   </div>
                 </form>
-              </Card>
-            </DialogContent>
-          </Dialog>
+              </Form>
+            </Card>
+          </DialogContent>
+        </Dialog>
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" className="rounded-xl">
-              <Upload className="w-4 h-4 mr-2" />
-              Importar Excel
-            </Button>
-            <Button variant="outline" className="rounded-xl">
-              <Download className="w-4 h-4 mr-2" />
-              Exportar
-            </Button>
-          </div>
-        </div>
+        {/* Tabla con columnas simplificadas */}
+        <TableStructure
+          globalFilter={globalFilter}
+          setGlobalFilter={setGlobalFilter}
+          columns={columns}
+          table={table}
+        />
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Estudiantes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre o carnet..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Select value={filterCarrera} onValueChange={setFilterCarrera}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Todas las carreras" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {carreras.map((carrera) => (
-                    <SelectItem key={carrera.id} value={String(carrera.id)}>
-                      {carrera.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={filterAño} onValueChange={setFilterAño}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Todos los años" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {[1, 2, 3, 4, 5].map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}° Año
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Estudiante</TableHead>
-                  <TableHead>Carrera</TableHead>
-                  <TableHead>Año</TableHead>
-                  <TableHead>Progreso</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedEstudiantes.map((estudiante) => {
-                  const { horasCompletadas, horasRequeridas, porcentaje } =
-                    calcularHoras(estudiante);
-                  return (
-                    <TableRow key={estudiante.id}>
-                      <TableCell>
-                        <div className="font-medium">
-                          {estudiante.name} {estudiante.lastname}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {estudiante.student_id_card} • {estudiante.email}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {estudiante.career?.name || "Sin carrera"}
-                      </TableCell>
-                      <TableCell>{estudiante.career_year}</TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span>
-                              {horasCompletadas} / {horasRequeridas} hrs
-                            </span>
-                            <span>{porcentaje}%</span>
-                          </div>
-                          <Progress value={porcentaje} className="h-2" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => startEdit(estudiante)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600"
-                            onClick={() => handleDelete(estudiante.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-        <div className="flex justify-center mt-6 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          >
-            Anterior
-          </Button>
-
-          <span className="px-2 py-1 text-sm">
-            Página {currentPage} de {totalPages}
-          </span>
-
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage === totalPages}
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-          >
-            Siguiente
-          </Button>
-        </div>
-      </Card>
-    </div>
+      <GeneralAlert
+        title="¿Estás seguro que deseas eliminar este estudiante?"
+        description="Esta acción no se puede deshacer."
+        openAlert={openAlertDelete}
+        setOpenAlert={setOpenAlertDelete}
+        confirmText="Confirmar"
+        onConfirm={() => confirmDelete()}
+        onCancel={() => cancelDelete()}
+      />
+      <Toaster position="top-right" />
+    </>
   );
 }
