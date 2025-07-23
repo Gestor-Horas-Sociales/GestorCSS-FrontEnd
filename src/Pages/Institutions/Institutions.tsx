@@ -205,7 +205,18 @@ export default function Institutions() {
           </div>
           <Button
             className="rounded-md shadow-sm cursor-pointer"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setOpen(true);
+              setActiveEdit(false);
+              form.reset({
+                name: "",
+                email: "",
+                address: "",
+                phone: "",
+                district_id: undefined,
+                departament_id: undefined,
+              });
+            }}
           >
             <Plus className="w-4 h-4" />
             Nueva institución
@@ -326,7 +337,7 @@ export default function Institutions() {
         />
       </div>
       <GeneralAlert
-        title="¿Estás seguro que deseas cancelar la referencia?"
+        title="¿Estás seguro de eliminar esta institución?"
         description="Esta acción no se puede deshacer."
         openAlert={openAlertDelete}
         setOpenAlert={setOpenAlertDelete}
