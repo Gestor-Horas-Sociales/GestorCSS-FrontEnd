@@ -34,4 +34,18 @@ export const HoursRecordSchema = z.object({
     description: z.string().nonempty({ message: "La descripción es requerida" }),
     hours: z.number().min(0, { message: "Las horas deben ser un número positivo" }),
     typeHours_id: z.number({ message: "El tipo de horas es requerido" }), 
+    student: z.object({
+        id: z.number(),
+        name: z.string(),
+        lastname: z.string(),
+        email: z.string().email(),
+        student_id_card: z.string().optional(),
+    }).optional(),
+    project: z.object({
+        id: z.number(),
+        name: z.string(),
+        description: z.string().optional(),
+        start_date: z.date().optional(),
+        end_date: z.date().optional(),
+    }).optional(),
 })

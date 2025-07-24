@@ -109,6 +109,7 @@ export const useProjects = () => {
 
 
     return {
+        getAllProjects,
         projects,
         loading,
         handleDeleteProject,

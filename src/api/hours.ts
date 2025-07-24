@@ -22,3 +22,9 @@ export const updateHoursRecord = (id: number, data: Partial<HoursRecordType>) =>
 // Eliminar un registro de horas por ID
 export const deleteHoursRecord = (id: number) =>
     api.delete(`/recordhours/${id}`);
+
+// Obtener tipos de horas
+export const getTypeHours =  () => {
+  const response = api.get("/typehours");
+  return response.then(res => res.data.data);
+}

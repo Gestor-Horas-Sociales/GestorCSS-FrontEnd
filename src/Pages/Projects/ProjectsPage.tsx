@@ -52,7 +52,7 @@ export default function ProjectsPage() {
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
   const [idDelete, setIdDelete] = useState<number>(0);
   const { departaments } = useDepartament();
-  const { departamentsDistrict, getAllDepartamentsByDistrict } = useDistrict();
+  const { districts, getAllDepartamentsByDistrict } = useDistrict();
   const [idDepartament, setIdDepartment] = useState<number>(0);
 
   const form = useForm<z.infer<typeof ProjectSchema>>({
@@ -68,7 +68,7 @@ export default function ProjectsPage() {
       req_gender: "",
       req_career: "",
       number_beneficaries: 1,
-      departament_id: 1, // Note: This should match the correct field name in your schema
+      departament_id: 1,
       district_id: 1,
       start_date: new Date(),
       end_date: new Date(),
@@ -76,6 +76,21 @@ export default function ProjectsPage() {
       institution_id: 1,
     },
   });
+  
+  useEffect(() => {
+    if (idDepartament) {
+      getAllDepartamentsByDistrict(idDepartament);
+    }
+  }, [idDepartament, getAllDepartamentsByDistrict]);
+
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      setIdDepartment(value.departament_id ?? 0); // Si es undefined, usa 0
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+
   const openDialogDelete = useCallback((id: number) => {
     setOpenAlertDelete(true);
     setIdDelete(id);
@@ -103,6 +118,7 @@ export default function ProjectsPage() {
     ) => {
       setOpen(true);
       setActiveEdit(true);
+      setIdDepartment(departament_id);
 
       form.reset({
         id,
@@ -126,6 +142,7 @@ export default function ProjectsPage() {
     },
     [form, setOpen, setActiveEdit]
   );
+
   const columns: ColumnDef<ProjectType>[] = [
     {
       accessorKey: "name",
@@ -180,18 +197,29 @@ export default function ProjectsPage() {
       id: "location",
       header: "Ubicación",
       cell: ({ row }) => {
-        const depto = departaments.find(
-          (d) => d.id === row.original.departament_id
-        );
-        const district = departamentsDistrict.find(
-          (d) => d.id === row.original.district_id
-        );
-
+        // Verifica si tienes datos anidados como en Instituciones
+        if (row.original.district_id) {
+          return (
+            <div className="min-w-[120px]">
+              <div className="text-sm">
+                {districts.find(d => d.id === row.original.district_id)?.departament?.name || `ID: ${row.original.district_id}`}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {districts.find(d => d.id === row.original.district_id)?.name || `ID: ${row.original.district_id}`}
+              </div>
+            </div>
+          );
+        }
+    
+        // Fallback a la búsqueda manual si no hay datos anidados
+        const depto = departaments.find(d => d.id === row.original.departament_id);
+        const district = districts.find(d => d.id === row.original.district_id);
+    
         return (
           <div className="min-w-[120px]">
-            <div className="text-sm">{depto?.name || "-"}</div>
+            <div className="text-sm">{depto?.name || `ID: ${row.original.departament_id}`}</div>
             <div className="text-xs text-muted-foreground">
-              {district?.name || "-"}
+              {district?.name || `ID: ${row.original.district_id}`}
             </div>
           </div>
         );
@@ -297,17 +325,19 @@ export default function ProjectsPage() {
   };
 
   useEffect(() => {
-    if (idDepartament) {
+    if (idDepartament > 0) {
       getAllDepartamentsByDistrict(idDepartament);
     }
   }, [idDepartament, getAllDepartamentsByDistrict]);
 
   useEffect(() => {
     const subscription = form.watch((value) => {
-      setIdDepartment(value.departament_id ?? 0); // Si es undefined, usa 0
+      if (value.departament_id && value.departament_id !== idDepartament) {
+        setIdDepartment(value.departament_id);
+      }
     });
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, idDepartament]);
 
   return (
     <>
@@ -346,7 +376,7 @@ export default function ProjectsPage() {
                     req_gender: "",
                     req_career: "",
                     number_beneficaries: 1,
-                    departament_id: 1, // Note: This should match the correct field name in your schema
+                    departament_id: 1,
                     district_id: 1,
                     start_date: new Date(),
                     end_date: new Date(),
@@ -357,7 +387,6 @@ export default function ProjectsPage() {
               }}
             >
               <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto px-4 sm:px-6 lg:px-8">
-                {" "}
                 <DialogHeader>
                   <DialogTitle>
                     {activeEdit ? "Editar Proyecto" : "Crear Proyecto"}
@@ -507,7 +536,7 @@ export default function ProjectsPage() {
                               placeholder="Seleccione distrito"
                               valueType="number"
                               disabled={idDepartament === 0}
-                              listRender={departamentsDistrict.map((d) => ({
+                              listRender={districts.map((d) => ({
                                 key: d.id.toString(),
                                 textRender: d.name,
                               }))}
@@ -554,7 +583,7 @@ export default function ProjectsPage() {
                               nameField="end_date"
                               label="Fecha Fin"
                               placeholder="Selecciona fecha de fin"
-                              fromDate={form.watch("start_date")} // Fecha mínima = start_date
+                              fromDate={form.watch("start_date")}
                             />
                           </div>
                         </div>

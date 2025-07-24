@@ -89,6 +89,31 @@ export const useHoursRecord = () => {
         fetchAllHours();
     }, [fetchAllHours]);
 
+    //Obtener horas por tipo de horas
+    const getHoursByType = useCallback(
+        (typeId: number) => {
+            return hours.filter((hour) => hour.typeHours_id === typeId);
+        },
+        [hours]
+    );
+
+    // Función auxiliar para formatear fechas
+    const formatDateForInput = (date: Date | string | undefined): string => {
+        if (!date) return '';
+
+        // Si es string, convertirlo a Date primero
+        const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+        // Validar que sea una fecha válida
+        if (isNaN(dateObj.getTime())) return '';
+
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+
+        return `${year}-${month}-${day}`;
+    };
+    
     return {
         hours,
         loading,
@@ -99,5 +124,7 @@ export const useHoursRecord = () => {
         handleDeleteHoursRecord,
         insertHoursRecord,
         getAllHoursRecord: fetchAllHours, // Opcional: si necesitas exponer esta función
+        getHoursByType,
+        formatDateForInput
     };
 };

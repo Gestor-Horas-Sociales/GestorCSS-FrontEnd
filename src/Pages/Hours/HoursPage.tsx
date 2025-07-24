@@ -1,490 +1,413 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { Plus, Edit, XCircle } from "lucide-react";
+import { useHoursRecord } from "@/hooks/use-hours";
+import Spinner from "@/components/Spinner";
+import type { ColumnDef } from "@tanstack/react-table";
+import type { HoursRecordType } from "@/Types/HoursType";
+import { HoursRecordSchema } from "@/Types/HoursType";
+import { useTable } from "@/hooks/useTable";
+import TableStructure from "@/components/TableStructure";
+import { useCallback, useState, useEffect } from "react";
+import { Toaster } from "sonner";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Clock,
-  Plus,
-  CheckCircle,
-  XCircle,
-  Calendar,
-  FileText,
-  Upload,
-  Download,
-  Search,
-  Eye,
-  Edit,
-} from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form } from "@/components/ui/form";
+import FormTextField from "@/components/FormTextField";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
-import { useHoursRecord } from "@/hooks/use-hours";
-import { useInstitutions } from "@/hooks/use-institutions";
-
-// Datos de ejemplo
-const registrosHoras = [
-  {
-    id: "1",
-    estudiante: {
-      nombre: "María González",
-      carnet: "00123456",
-      carrera: "Ing. Sistemas",
-    },
-    proyecto: {
-      nombre: "Apoyo Educativo El Manguito",
-      tipo: "externo",
-    },
-    horas: 8,
-    fecha: "2024-01-15",
-    descripcion_actividad: "Clases de matemáticas para niños de 3er grado",
-    tipo_horas: "sociales",
-    estado: "pendiente",
-    evidencias: ["foto1.jpg", "reporte.pdf"],
-    coordinador: "Dr. María Rodríguez",
-  },
-  {
-    id: "2",
-    estudiante: {
-      nombre: "Carlos Martínez",
-      carnet: "00123457",
-      carrera: "Ing. Civil",
-    },
-    proyecto: {
-      nombre: "Construcción Comunitaria",
-      tipo: "externo",
-    },
-    horas: 6,
-    fecha: "2024-01-14",
-    descripcion_actividad: "Supervisión de construcción de aulas",
-    tipo_horas: "profesionales",
-    estado: "aprobado",
-    evidencias: ["mediciones.pdf"],
-    coordinador: "Ing. Roberto Silva",
-    fecha_aprobacion: "2024-01-16",
-  },
-];
+import FormSelectField from "@/components/FormSelectField";
+import { z } from "zod";
+import GeneralAlert from "@/components/GeneralAlert";
+import { Badge } from "@/components/ui/badge";
+import { useProjects } from "@/hooks/use-projects";
 
 export default function HoursPage() {
   const {
     hours,
     loading,
+    handleDeleteHoursRecord,
     open,
     setOpen,
     activeEdit,
     setActiveEdit,
-    handleDeleteHoursRecord,
     insertHoursRecord,
-    getAllHoursRecord: fetchAllHours,
   } = useHoursRecord();
 
-
+  const { estudiantes } = useEstudiantes();
+  const { projects, getAllProjects } = useProjects();
+  
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
-
-  const [isNewRecordModalOpen, setIsNewRecordModalOpen] = useState(false);
-  const [filterEstado, setFilterEstado] = useState("");
-  const [filterTipoHoras, setFilterTipoHoras] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const { estudiantes, fetchEstudianteById } = useEstudiantes();
+  const [idDelete, setIdDelete] = useState<number>(0);
 
   useEffect(() => {
-    const cargarDatos = async () => {
-      const estudiante = await fetchEstudianteById(5);
-      console.log("Estudiante 5:", estudiante);
-    };
-    cargarDatos();
-  }, []);
+    getAllProjects();
+  }, [getAllProjects]);
 
-  const filteredRegistros = registrosHoras.filter((registro) => {
-    const matchesSearch =
-      registro.estudiante.nombre
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      registro.estudiante.carnet.includes(searchTerm) ||
-      registro.proyecto.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesEstado = !filterEstado || registro.estado === filterEstado;
-    const matchesTipo =
-      !filterTipoHoras || registro.tipo_horas === filterTipoHoras;
-
-    return matchesSearch && matchesEstado && matchesTipo;
+  const form = useForm<z.infer<typeof HoursRecordSchema>>({
+    resolver: zodResolver(HoursRecordSchema),
+    defaultValues: {
+      id: undefined,
+      student_id: 0,
+      project_id: 0,
+      date_register: new Date(),
+      description: "",
+      hours: 0,
+      typeHours_id: 0,
+    },
   });
 
-  const getEstadoBadge = (estado: string) => {
-    switch (estado) {
-      case "aprobado":
-        return <Badge className="bg-green-100 text-green-800">Aprobado</Badge>;
-      case "rechazado":
-        return <Badge className="bg-red-100 text-red-800">Rechazado</Badge>;
-      case "pendiente":
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
+  const openDialogDelete = useCallback((id: number) => {
+    setOpenAlertDelete(true);
+    setIdDelete(id);
+  }, []);
+
+  const editHoursRecord = useCallback(
+    (
+      id: number,
+      student_id: number,
+      project_id: number,
+      date_register: Date,
+      description: string,
+      hours: number,
+      typeHours_id: number
+    ) => {
+      setOpen(true);
+      setActiveEdit(true);
+      form.reset({
+        id,
+        student_id,
+        project_id,
+        date_register,
+        description,
+        hours,
+        typeHours_id,
+      });
+    },
+    [form, setOpen, setActiveEdit]
+  );
+
+  const columns: ColumnDef<HoursRecordType>[] = [
+    {
+      accessorKey: "id",
+      header: "ID",
+      meta: {
+        label: "ID",
+      },
+    },
+    {
+      accessorKey: "student",
+      header: "Estudiante",
+      cell: ({ row }) => {
+        const student = row.original.student;
+        return student ? (
+          <div>
+            <div className="font-medium">
+              {student.name} {student.lastname}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {student.student_id_card ?? "Sin carnet"} • {student.email}
+            </div>
+          </div>
+        ) : (
+          <span className="text-muted-foreground italic">No asignado</span>
         );
-      default:
-        return <Badge variant="secondary">{estado}</Badge>;
-    }
+      },
+    },
+    {
+      accessorKey: "project",
+      header: "Proyecto",
+      cell: ({ row }) => {
+        const project = row.original.project;
+        return project ? (
+          <div>
+            <div className="font-medium">{project.name}</div>
+          </div>
+        ) : (
+          <span className="text-muted-foreground italic">No asignado</span>
+        );
+      },
+    },
+    {
+      accessorKey: "hours",
+      header: "Horas",
+      cell: ({ row }) => {
+        const hours = row.original.hours;
+        return (
+          <div className="text-center">
+            <div className="text-lg font-bold">{hours}</div>
+            <div className="text-xs text-muted-foreground">horas</div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "date_register",
+      header: "Fecha",
+      cell: ({ row }) => {
+        const date = new Date(row.original.date_register);
+        return date.toLocaleDateString("es-ES", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        });
+      },
+    },
+    {
+      accessorKey: "typeHours_id",
+      header: "Tipo de Horas",
+      cell: ({ row }) => {
+        const typeHours = row.original.typeHours_id;
+        return (
+          <Badge variant={typeHours === 1 ? "default" : "secondary"}>
+            {typeHours === 1 ? "Internas" : "Externas"}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "estado",
+      header: "Estado",
+      cell: ({ row }) => {
+        const estado = row.original.project?.active;
+        return (
+          <div className="flex items-center">
+            {estado === true && (
+              <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
+            )}
+            {estado === false && (
+              <Badge className="bg-green-100 text-green-800">Aprobado</Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => {
+        const registro = row.original;
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() =>
+                editHoursRecord(
+                  registro.id,
+                  registro.student_id,
+                  registro.project_id,
+                  registro.date_register,
+                  registro.description,
+                  registro.hours,
+                  registro.typeHours_id
+                )
+              }
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => openDialogDelete(registro.id)}
+            >
+              <XCircle className="w-4 h-4 text-red-600" />
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
+  const { globalFilter, setGlobalFilter, table } = useTable({
+    data: hours,
+    columns,
+  });
+
+  const cancelDelete = () => {
+    setOpenAlertDelete(false);
+    setIdDelete(0);
+  };
+
+  const confirmDelete = async () => {
+    await handleDeleteHoursRecord(idDelete);
+    setOpenAlertDelete(false);
+    setIdDelete(0);
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Seguimiento de Horas</h1>
-          <p className="text-muted-foreground">
-            Registro, validación y seguimiento de horas sociales y profesionales
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Dialog
-            open={isNewRecordModalOpen}
-            onOpenChange={setIsNewRecordModalOpen}
+    <>
+      {loading && <Spinner />}
+      <div className="p-6 space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Seguimiento de Horas</h1>
+            <p className="text-muted-foreground">
+              Registro, validación y seguimiento de horas sociales y
+              profesionales
+            </p>
+          </div>
+          <Button
+            className="rounded-md shadow-sm cursor-pointer"
+            onClick={() => {
+              setOpen(true);
+              setActiveEdit(false);
+              form.reset({
+                student_id: 0,
+                project_id: 0,
+                date_register: new Date(),
+                description: "",
+                hours: 0,
+                typeHours_id: 0,
+              });
+            }}
           >
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Registrar Horas
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Registrar Nuevas Horas</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Estudiante</label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar estudiante" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">
-                          María González - 00123456
-                        </SelectItem>
-                        <SelectItem value="2">
-                          Carlos Martínez - 00123457
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Proyecto</label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar proyecto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">
-                          Apoyo Educativo El Manguito
-                        </SelectItem>
-                        <SelectItem value="2">
-                          Construcción Comunitaria
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Horas</label>
-                    <Input type="number" placeholder="8" min="1" max="12" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Fecha</label>
-                    <Input type="date" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Tipo de Horas</label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="sociales">Sociales</SelectItem>
-                        <SelectItem value="profesionales">
-                          Profesionales
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">
-                    Descripción de Actividades
-                  </label>
-                  <Textarea
-                    placeholder="Describe las actividades realizadas durante estas horas..."
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Evidencias</label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                    <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600">
-                      Arrastra archivos aquí o{" "}
-                      <span className="text-blue-600 cursor-pointer">
-                        selecciona archivos
-                      </span>
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Formatos: PDF, JPG, PNG (máx. 10MB)
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsNewRecordModalOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button>Registrar Horas</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Exportar
+            <Plus className="w-4 h-4" />
+            Registrar Horas
           </Button>
         </div>
+
+        <Dialog
+          open={open}
+          onOpenChange={(isOpen) => {
+            setOpen(isOpen);
+            if (!isOpen) {
+              setActiveEdit(false);
+              form.reset({
+                student_id: 0,
+                project_id: 0,
+                date_register: new Date(),
+                description: "",
+                hours: 0,
+                typeHours_id: 0,
+              });
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
+            <DialogHeader>
+              <DialogTitle>
+                {activeEdit
+                  ? "Editar Registro de Horas"
+                  : "Nuevo Registro de Horas"}
+              </DialogTitle>
+              <DialogDescription>
+                {activeEdit
+                  ? "Editar los detalles del registro de horas."
+                  : "Ingrese los detalles del nuevo registro de horas."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(insertHoursRecord)}>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="flex flex-col">
+                      <FormSelectField
+                        formField={form}
+                        nameField="student_id"
+                        label="Estudiante"
+                        placeholder="Seleccione estudiante"
+                        listRender={estudiantes.map((estudiante) => ({
+                          key: estudiante.id.toString(),
+                          textRender: `${estudiante.name} ${estudiante.lastname} - ${estudiante.student_id_card}`,
+                        }))}
+                        className="min-w-0" // Añadido para control de ancho
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <FormSelectField
+                        formField={form}
+                        nameField="project_id"
+                        label="Proyecto"
+                        placeholder="Seleccione proyecto"
+                        listRender={projects.map((project) => ({
+                          key: project.id.toString(),
+                          textRender: `${project.name}${project.description ? ` - ${project.description.substring(0, 20)}...` : ''}`,
+                          value: project.id,
+                        }))}
+                        className="min-w-0" // Añadido para control de ancho
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="flex flex-col">
+                      <FormTextField
+                        formField={form}
+                        nameField="hours"
+                        label="Horas"
+                        placeholder="Ingrese cantidad de horas"
+                        type="number"
+                        className="min-w-0" // Añadido para control de ancho
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <FormTextField
+                        formField={form}
+                        nameField="date_register"
+                        label="Fecha"
+                        type="date"
+                        className="min-w-0" // Añadido para control de ancho
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <FormSelectField
+                        formField={form}
+                        nameField="typeHours_id"
+                        label="Tipo de Horas"
+                        placeholder="Seleccione tipo"
+                        listRender={[
+                          { key: "1", textRender: "Internas" },
+                          { key: "2", textRender: "Externas" },
+                        ]}
+                        className="min-w-0" // Añadido para control de ancho
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <FormTextField
+                      formField={form}
+                      nameField="description"
+                      label="Descripción"
+                      placeholder="Ingrese descripción de las actividades"
+                      isTextArea={true}
+                      rows={3}
+                      className="min-w-0" // Añadido para control de ancho
+                    />
+                  </div>
+                </div>
+                <div className="w-full flex justify-center">
+                  <Button type="submit" className="mt-4 w-full sm:w-auto">
+                    {activeEdit ? "Actualizar Registro" : "Registrar Horas"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        <TableStructure
+          globalFilter={globalFilter}
+          setGlobalFilter={setGlobalFilter}
+          columns={columns}
+          table={table}
+        />
       </div>
-
-      {/* Estadísticas */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Registros
-            </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2,847</div>
-            <p className="text-xs text-muted-foreground">+156 esta semana</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pendientes Validación
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">127</div>
-            <p className="text-xs text-muted-foreground">Requieren atención</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aprobadas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2,580</div>
-            <p className="text-xs text-muted-foreground">90.6% del total</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Horas Totales</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">18,450</div>
-            <p className="text-xs text-muted-foreground">Horas validadas</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtros y tabla */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Registros de Horas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
-            <div className="flex items-center gap-2 flex-1">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por estudiante o proyecto..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Select value={filterEstado} onValueChange={setFilterEstado}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="pendiente">Pendiente</SelectItem>
-                  <SelectItem value="aprobado">Aprobado</SelectItem>
-                  <SelectItem value="rechazado">Rechazado</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filterTipoHoras}
-                onValueChange={setFilterTipoHoras}
-              >
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Tipo Horas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="sociales">Sociales</SelectItem>
-                  <SelectItem value="profesionales">Profesionales</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Estudiante</TableHead>
-                  <TableHead>Proyecto</TableHead>
-                  <TableHead>Horas</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Evidencias</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRegistros.map((registro) => (
-                  <TableRow key={registro.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {registro.estudiante.nombre}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {registro.estudiante.carnet} •{" "}
-                          {registro.estudiante.carrera}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {registro.proyecto.nombre}
-                        </div>
-                        <Badge variant="outline" className="mt-1">
-                          {registro.proyecto.tipo}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-center">
-                        <div className="text-lg font-bold">
-                          {registro.horas}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          horas
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(registro.fecha).toLocaleDateString("es-ES")}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          registro.tipo_horas === "sociales"
-                            ? "default"
-                            : "secondary"
-                        }
-                      >
-                        {registro.tipo_horas}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{getEstadoBadge(registro.estado)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <FileText className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {registro.evidencias.length}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        {registro.estado === "pendiente" && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-green-600"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button variant="ghost" size="sm">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      <GeneralAlert
+        title="¿Estás seguro de eliminar este registro de horas?"
+        description="Esta acción no se puede deshacer."
+        openAlert={openAlertDelete}
+        setOpenAlert={setOpenAlertDelete}
+        confirmText="Confirmar"
+        onConfirm={() => confirmDelete()}
+        onCancel={() => cancelDelete()}
+      />
+      <Toaster position="top-right" />
+    </>
   );
 }

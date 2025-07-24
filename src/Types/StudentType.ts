@@ -1,5 +1,30 @@
 import { z } from "zod";
 
+
+export interface StudentType {
+  id: number;
+  name: string;
+  lastname: string;
+  student_id_card: string;
+  career_year: number;
+  gender: string;
+  email: string;
+  message?: string;
+  departmet_id?: number;
+  district_id: number;
+  active: boolean;
+  address: string;
+  career?: {
+    id: number;
+    name: string;
+  };
+  internal_hours?: number;
+  external_hours?: number;
+};
+
+
+export type StudentSchemaType = z.infer<typeof StudentSchema>;
+
 export const StudentSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, { message: "Nombre es requerido" }),
@@ -21,25 +46,5 @@ export const StudentSchema = z.object({
     }),
 });
 
-export type StudentSchemaType = z.infer<typeof StudentSchema>;
 
-export interface StudentType {
-  id: number;
-  name: string;
-  lastname: string;
-  student_id_card: string;
-  career_year: number;
-  gender: string;
-  email: string;
-  message?: string;
-  departmet_id?: number;
-  district_id: number;
-  active: boolean;
-  address: string;
-  career?: {
-    career_id: number;
-    career_name: string;
-  };
-  internal_hours?: number;
-  external_hours?: number;
-};
+

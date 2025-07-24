@@ -154,8 +154,8 @@ export default function UsersPage() {
       header: "Carrera",
       cell: ({ row }) => (
         <span>
-          {row.original.career?.career_name
-            ? row.original.career.career_name
+          {row.original.career?.name
+            ? row.original.career.name
             : "Sin Carrera Asignada"}
         </span>
       ),
@@ -212,8 +212,8 @@ export default function UsersPage() {
                 row.original.address,
                 row.original.career
                   ? {
-                      id: row.original.career.career_id,
-                      name: row.original.career.career_name,
+                      id: row.original.career.id,
+                      name: row.original.career.name,
                     }
                   : null
               )
