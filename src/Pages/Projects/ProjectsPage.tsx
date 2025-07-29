@@ -36,6 +36,9 @@ import { Toaster } from "sonner";
 import TableStructure from "@/components/TableStructure";
 import { useTable } from "@/hooks/useTable";
 import { FormDatePicker } from "@/components/FormDatePicker";
+import { useCarrera } from "@/hooks/use-carrera"; // Assuming you have a useCarrera hook
+
+// Removed as it's not needed
 
 export default function ProjectsPage() {
   const {
@@ -52,31 +55,33 @@ export default function ProjectsPage() {
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
   const [idDelete, setIdDelete] = useState<number>(0);
   const { departaments } = useDepartament();
-  const { districts, getAllDepartamentsByDistrict } = useDistrict();
+  const { districts, getAllDepartamentsByDistrict, departamentsDistrict } =
+    useDistrict();
   const [idDepartament, setIdDepartment] = useState<number>(0);
+  const { carreras } = useCarrera();
 
   const form = useForm<z.infer<typeof ProjectSchema>>({
     resolver: zodResolver(ProjectSchema),
     defaultValues: {
       name: "",
       description: "",
-      social_ipact: "",
+      social_impact: "",
       type_hours_id: 1,
       req_hours: 1,
-      maximun_students: 1,
+      maximum_students: 1,
       req_min_year: 1,
       req_gender: "",
-      req_career: "",
-      number_beneficaries: 1,
+      req_career: 0,
+      number_beneficiaries: 1,
       departament_id: 1,
       district_id: 1,
-      start_date: new Date(),
-      end_date: new Date(),
+      start_date: new Date().toISOString(),
+      end_date: new Date().toISOString(),
       active: true,
       institution_id: 1,
     },
   });
-  
+
   useEffect(() => {
     if (idDepartament) {
       getAllDepartamentsByDistrict(idDepartament);
@@ -90,7 +95,6 @@ export default function ProjectsPage() {
     return () => subscription.unsubscribe();
   }, [form]);
 
-
   const openDialogDelete = useCallback((id: number) => {
     setOpenAlertDelete(true);
     setIdDelete(id);
@@ -101,14 +105,14 @@ export default function ProjectsPage() {
       id: number,
       name: string,
       description: string,
-      social_ipact: string,
+      social_impact: string,
       type_hours_id: number,
       req_hours: number,
-      maximun_students: number,
+      maximum_students: number,
       req_min_year: number,
       req_gender: string,
       req_career: string,
-      number_beneficaries: number,
+      number_beneficiaries: number,
       departament_id: number,
       district_id: number,
       start_date: Date,
@@ -118,24 +122,25 @@ export default function ProjectsPage() {
     ) => {
       setOpen(true);
       setActiveEdit(true);
-      setIdDepartment(departament_id);
-
       form.reset({
         id,
         name,
         description,
-        social_ipact,
+        social_impact,
         type_hours_id,
         req_hours,
-        maximun_students,
+        maximum_students,
         req_min_year,
         req_gender,
-        req_career,
-        number_beneficaries,
+        req_career:
+          typeof req_career === "string"
+            ? parseInt(req_career, 10)
+            : req_career,
+        number_beneficiaries,
         departament_id,
         district_id,
-        start_date,
-        end_date,
+        start_date: start_date.toISOString(),
+        end_date: end_date.toISOString(),
         active,
         institution_id,
       });
@@ -202,22 +207,30 @@ export default function ProjectsPage() {
           return (
             <div className="min-w-[120px]">
               <div className="text-sm">
-                {districts.find(d => d.id === row.original.district_id)?.departament?.name || `ID: ${row.original.district_id}`}
+                {districts.find((d) => d.id === row.original.district_id)
+                  ?.departament?.name || `ID: ${row.original.district_id}`}
               </div>
               <div className="text-xs text-muted-foreground">
-                {districts.find(d => d.id === row.original.district_id)?.name || `ID: ${row.original.district_id}`}
+                {districts.find((d) => d.id === row.original.district_id)
+                  ?.name || `ID: ${row.original.district_id}`}
               </div>
             </div>
           );
         }
-    
+
         // Fallback a la búsqueda manual si no hay datos anidados
-        const depto = departaments.find(d => d.id === row.original.departament_id);
-        const district = districts.find(d => d.id === row.original.district_id);
-    
+        const depto = departaments.find(
+          (d) => d.id === row.original.departament_id
+        );
+        const district = districts.find(
+          (d) => d.id === row.original.district_id
+        );
+
         return (
           <div className="min-w-[120px]">
-            <div className="text-sm">{depto?.name || `ID: ${row.original.departament_id}`}</div>
+            <div className="text-sm">
+              {depto?.name || `ID: ${row.original.departament_id}`}
+            </div>
             <div className="text-xs text-muted-foreground">
               {district?.name || `ID: ${row.original.district_id}`}
             </div>
@@ -232,12 +245,12 @@ export default function ProjectsPage() {
       cell: ({ row }) => (
         <div className="text-center space-y-1">
           <div className="text-sm">
-            <span className="font-medium">{row.original.maximun_students}</span>{" "}
+            <span className="font-medium">{row.original.maximum_students}</span>{" "}
             cupos
           </div>
           <div className="text-sm">
             <span className="font-medium">
-              {row.original.number_beneficaries}
+              {row.original.number_beneficiaries}
             </span>{" "}
             beneficiarios
           </div>
@@ -272,21 +285,34 @@ export default function ProjectsPage() {
             className="h-8 w-8 p-0"
             onClick={() => {
               editProject(
-                row.original.id,
+                row.original.id ?? 0,
                 row.original.name,
                 row.original.description,
-                row.original.social_ipact,
+                row.original.social_impact ?? "",
                 row.original.type_hours_id,
                 row.original.req_hours,
-                row.original.maximun_students,
+                row.original.maximum_students,
                 row.original.req_min_year,
                 row.original.req_gender,
-                row.original.req_career,
-                row.original.number_beneficaries,
-                row.original.departament_id ?? 0,
-                row.original.district_id,
-                row.original.start_date,
-                row.original.end_date,
+                typeof row.original.req_career === "string"
+                  ? row.original.req_career
+                  : typeof row.original.req_career === "object" &&
+                    "name" in row.original.req_career
+                  ? row.original.req_career.name
+                  : "",
+                row.original.number_beneficiaries,
+                typeof row.original.departament_id === "number"
+                  ? row.original.departament_id
+                  : row.original.departament_id?.id ?? 0,
+                typeof row.original.district_id === "number"
+                  ? row.original.district_id
+                  : row.original.district_id?.id ?? 0,
+                typeof row.original.start_date === "string"
+                  ? new Date(row.original.start_date)
+                  : row.original.start_date,
+                typeof row.original.end_date === "string"
+                  ? new Date(row.original.end_date)
+                  : row.original.end_date,
                 row.original.active,
                 row.original.institution_id
               );
@@ -298,7 +324,7 @@ export default function ProjectsPage() {
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-            onClick={() => openDialogDelete(row.original.id)}
+            onClick={() => openDialogDelete(row.original.id ?? 0)}
           >
             <Trash2 className="w-4 h-4" />
           </Button>
@@ -368,18 +394,18 @@ export default function ProjectsPage() {
                   form.reset({
                     name: "",
                     description: "",
-                    social_ipact: "",
+                    social_impact: "",
                     type_hours_id: 1,
                     req_hours: 1,
-                    maximun_students: 1,
+                    maximum_students: 1,
                     req_min_year: 1,
                     req_gender: "",
-                    req_career: "",
-                    number_beneficaries: 1,
+                    req_career: 0,
+                    number_beneficiaries: 1,
                     departament_id: 1,
                     district_id: 1,
-                    start_date: new Date(),
-                    end_date: new Date(),
+                    start_date: new Date().toISOString(),
+                    end_date: new Date().toISOString(),
                     active: true,
                     institution_id: 1,
                   });
@@ -430,7 +456,7 @@ export default function ProjectsPage() {
                           <div className="md:col-span-2">
                             <FormTextField
                               formField={form}
-                              nameField="social_ipact"
+                              nameField="social_impact"
                               label="Impacto Social Cuantificado"
                               placeholder="Describe el impacto social cuantificado (beneficiarios, área geográfica, etc.)"
                               isTextArea={true}
@@ -471,7 +497,7 @@ export default function ProjectsPage() {
                           <div>
                             <FormTextField
                               formField={form}
-                              nameField="maximun_students"
+                              nameField="maximum_students"
                               label="Cupos Disponibles"
                               placeholder="Ej: 20"
                               type="number"
@@ -502,11 +528,17 @@ export default function ProjectsPage() {
                           />
                         </div>
                         <div className="md:col-span-3">
-                          <FormTextField
+                          <FormSelectField
                             formField={form}
                             nameField="req_career"
-                            label="Carrera Requerida"
-                            placeholder="Ej: Ingeniería Civil"
+                            label="Carrera"
+                            placeholder="Carrera"
+                            valueType="number"
+                            listRender={carreras.map((carrera) => ({
+                              key: carrera.id.toString(),
+                              textRender: carrera.name,
+                            }))}
+                            className="rounded-xl"
                           />
                         </div>
                       </div>
@@ -515,38 +547,38 @@ export default function ProjectsPage() {
                       <div className="space-y-4">
                         <h3 className="text-lg font-semibold">Ubicación</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
+                          <div className="flex flex-col">
                             <FormSelectField
                               formField={form}
                               nameField="departament_id"
                               label="Departamento"
                               placeholder="Seleccione departamento"
-                              valueType="number"
-                              listRender={departaments.map((d) => ({
-                                key: d.id.toString(),
-                                textRender: d.name,
+                              listRender={departaments.map((departament) => ({
+                                key: departament.id.toString(),
+                                textRender: departament.name,
                               }))}
                             />
                           </div>
-                          <div>
+                          <div className="flex flex-col">
                             <FormSelectField
                               formField={form}
+                              disabled={idDepartament === 0}
                               nameField="district_id"
                               label="Distrito"
                               placeholder="Seleccione distrito"
-                              valueType="number"
-                              disabled={idDepartament === 0}
-                              listRender={districts.map((d) => ({
-                                key: d.id.toString(),
-                                textRender: d.name,
-                              }))}
+                              listRender={departamentsDistrict.map(
+                                (district) => ({
+                                  key: district.id.toString(),
+                                  textRender: district.name,
+                                })
+                              )}
                             />
                           </div>
                         </div>
                         <div>
                           <FormTextField
                             formField={form}
-                            nameField="number_beneficaries"
+                            nameField="number_beneficiaries"
                             label="Número de Beneficiarios"
                             placeholder="Ej: 150"
                             type="number"
@@ -556,52 +588,49 @@ export default function ProjectsPage() {
 
                       {/* Configuración */}
                       <div className="space-y-4">
+                        {/* Configuración */}
+
                         <h3 className="text-lg font-semibold">Configuración</h3>
-                        <div className="md:col-span-1">
-                          <FormSelectField
-                            formField={form}
-                            nameField="active"
-                            label="Estado"
-                            placeholder="Seleccionar estado"
-                            valueType="string"
-                            listRender={[
-                              { key: "true", textRender: "Activo" },
-                              { key: "false", textRender: "Inactivo" },
-                            ]}
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormDatePicker
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <FormSelectField
                               formField={form}
-                              nameField="start_date"
-                              label="Fecha Inicio"
-                              placeholder="Selecciona fecha de inicio"
-                            />
-                            <FormDatePicker
-                              formField={form}
-                              nameField="end_date"
-                              label="Fecha Fin"
-                              placeholder="Selecciona fecha de fin"
-                              fromDate={form.watch("start_date")}
+                              nameField="active"
+                              label="Estado"
+                              placeholder="Seleccionar estado"
+                              valueType="string"
+                              listRender={[
+                                { key: "true", textRender: "Activo" },
+                                { key: "false", textRender: "Inactivo" },
+                              ]}
                             />
                           </div>
                         </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormDatePicker
+                            control={form.control}
+                            name="start_date"
+                            label="Fecha Inicio"
+                            fromDate={new Date()}
+                            toDate={new Date(form.watch("end_date"))}
+                          />
+                          <FormDatePicker
+                            control={form.control}
+                            name="end_date"
+                            label="Fecha Fin"
+                            fromDate={new Date(form.watch("start_date"))}
+                          />
+                        </div>
                       </div>
+                    </div>
 
-                      <div className="flex justify-end gap-2 pt-4">
-                        <Button
-                          variant="outline"
-                          onClick={() => setOpen(false)}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button type="submit">
-                          {activeEdit
-                            ? "Actualizar Proyecto"
-                            : "Crear Proyecto"}
-                        </Button>
-                      </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button variant="outline" onClick={() => setOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button type="submit">
+                        {activeEdit ? "Actualizar Proyecto" : "Crear Proyecto"}
+                      </Button>
                     </div>
                   </form>
                 </Form>

@@ -41,20 +41,22 @@ export const useProjects = () => {
                 const response = await updateProject(String(data.id), {
                     name: data.name,
                     description: data.description,
-                    social_ipact: data.social_ipact ?? '',
+                    social_impact: data.social_impact ?? '',
                     type_hours_id: data.type_hours_id,
                     req_hours: data.req_hours,
-                    maximun_students: data.maximun_students,
+                    maximum_students: data.maximum_students,
                     req_min_year: data.req_min_year,
                     req_gender: data.req_gender,
                     req_career: data.req_career,
-                    number_beneficaries: data.number_beneficaries,
+                    number_beneficiaries: data.number_beneficiaries,
                     district_id: data.district_id,
                     start_date: data.start_date,
                     end_date: data.end_date,
                     active: data.active,
                     institution_id: data.institution_id,
                 });
+                console.log("Proyecto actualizado:", response.data);
+                
                 setActiveEdit(false);
                 setOpen(false);
                 toast.success(response.data.message);
@@ -62,20 +64,22 @@ export const useProjects = () => {
                 const response = await createProject({
                     name: data.name,
                     description: data.description,
-                    social_ipact: data.social_ipact ?? '',
+                    social_impact: data.social_impact ?? '',
                     type_hours_id: data.type_hours_id,
                     req_hours: data.req_hours,
-                    maximun_students: data.maximun_students,
+                    maximum_students: data.maximum_students,
                     req_min_year: data.req_min_year,
                     req_gender: data.req_gender,
                     req_career: data.req_career,
-                    number_beneficaries: data.number_beneficaries,
+                    number_beneficiaries: data.number_beneficiaries,
                     district_id: data.district_id,
                     start_date: data.start_date,
                     end_date: data.end_date,
                     active: data.active,
                     institution_id: data.institution_id,
                 });
+
+                console.log("Proyecto creado:", response.data);
                 toast.success(response.data.message);
                 setOpen(false);
             }
@@ -109,7 +113,6 @@ export const useProjects = () => {
 
 
     return {
-        getAllProjects,
         projects,
         loading,
         handleDeleteProject,
@@ -117,6 +120,6 @@ export const useProjects = () => {
         setOpen,
         activeEdit,
         setActiveEdit,
-        insertProject,
+        insertProject
     }
 };

@@ -55,7 +55,7 @@ export default function HoursPage() {
       id: undefined,
       student_id: 0,
       project_id: 0,
-      date_register: new Date(),
+      date_register: undefined,
       description: "",
       hours: 0,
       typeHours_id: 0,
@@ -83,7 +83,7 @@ export default function HoursPage() {
         id,
         student_id,
         project_id,
-        date_register,
+        date_register: new Date(date_register), // Formato YYYY-MM-
         description,
         hours,
         typeHours_id,
@@ -260,7 +260,7 @@ export default function HoursPage() {
               form.reset({
                 student_id: 0,
                 project_id: 0,
-                date_register: new Date(),
+                date_register: undefined,
                 description: "",
                 hours: 0,
                 typeHours_id: 0,
@@ -281,7 +281,7 @@ export default function HoursPage() {
               form.reset({
                 student_id: 0,
                 project_id: 0,
-                date_register: new Date(),
+                date_register: undefined,
                 description: "",
                 hours: 0,
                 typeHours_id: 0,

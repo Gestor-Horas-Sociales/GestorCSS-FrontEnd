@@ -88,6 +88,7 @@ export default function UsersPage() {
   }, []);
 
   // Función editEstudiante intacta con departamentos/distritos
+  // En la función editEstudiante
   const editEstudiante = useCallback(
     (
       id: number,
@@ -102,10 +103,14 @@ export default function UsersPage() {
       internal_hours: number,
       external_hours: number,
       address: string,
-      career: { id: number; name: string } | null
+      career: { id: number; name: string } | null,
+      departament_id?: number // Nuevo parámetro
     ) => {
       setOpen(true);
       setActiveEdit(true);
+
+      // Primero establecer el departamento para cargar los distritos
+      setIdDepartment(departament_id || 0);
 
       form.reset({
         id,
@@ -119,10 +124,11 @@ export default function UsersPage() {
         internal_hours,
         external_hours,
         address,
+        departmet_id: departament_id, // Usamos el nombre consistente
+        district_id,
         career: career
           ? { career_id: career.id, career_name: career.name }
           : { career_id: 1, career_name: "" },
-        district_id,
       });
     },
     [form, setOpen, setActiveEdit]
@@ -335,156 +341,159 @@ export default function UsersPage() {
                   onSubmit={form.handleSubmit(insertStudent)}
                   className="space-y-6"
                 >
-                  {/* Sección de Datos Personales (intacta) */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Datos Personales
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormTextField
-                        formField={form}
-                        nameField="name"
-                        label="Nombre"
-                        placeholder="Nombre"
-                        className="rounded-xl"
-                      />
-                      <FormTextField
-                        formField={form}
-                        nameField="lastname"
-                        label="Apellido"
-                        placeholder="Apellido"
-                        className="rounded-xl"
-                      />
-                      <FormTextField
-                        formField={form}
-                        nameField="student_id_card"
-                        label="Carnet de Estudiante"
-                        placeholder="Carnet de Estudiante"
-                        className="rounded-xl"
-                      />
-                      <FormTextField
-                        formField={form}
-                        nameField="email"
-                        label="Correo Electrónico"
-                        placeholder="Correo Electrónico"
-                        type="email"
-                        className="rounded-xl"
-                      />
+                  {/* Contenedor con scroll */}
+                  <div className="max-h-96 overflow-y-auto">
+                    {/* Sección de Datos Personales (intacta) */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">
+                        Datos Personales
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormTextField
+                          formField={form}
+                          nameField="name"
+                          label="Nombre"
+                          placeholder="Nombre"
+                          className="rounded-xl"
+                        />
+                        <FormTextField
+                          formField={form}
+                          nameField="lastname"
+                          label="Apellido"
+                          placeholder="Apellido"
+                          className="rounded-xl"
+                        />
+                        <FormTextField
+                          formField={form}
+                          nameField="student_id_card"
+                          label="Carnet de Estudiante"
+                          placeholder="Carnet de Estudiante"
+                          className="rounded-xl"
+                        />
+                        <FormTextField
+                          formField={form}
+                          nameField="email"
+                          label="Correo Electrónico"
+                          placeholder="Correo Electrónico"
+                          type="email"
+                          className="rounded-xl"
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Sección de Información Académica (intacta) */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Información Académica
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <FormSelectField
-                        formField={form}
-                        nameField="career.career_id"
-                        label="Carrera"
-                        placeholder="Carrera"
-                        valueType="number"
-                        listRender={carreras.map((carrera) => ({
-                          key: carrera.id.toString(),
-                          textRender: carrera.name,
-                        }))}
-                        className="rounded-xl"
-                      />
-                      <FormSelectField
-                        formField={form}
-                        nameField="career_year"
-                        label="Año Académico"
-                        placeholder="Año académico"
-                        valueType="number"
-                        listRender={[1, 2, 3, 4, 5].map((year) => ({
-                          key: year.toString(),
-                          textRender: `${year}° Año`,
-                        }))}
-                        className="rounded-xl"
-                      />
-                      <FormSelectField
-                        formField={form}
-                        nameField="gender"
-                        label="Género"
-                        placeholder="Género"
-                        valueType="string"
-                        listRender={[
-                          { key: "M", textRender: "Masculino" },
-                          { key: "F", textRender: "Femenino" },
-                          { key: "O", textRender: "Otro" },
-                        ]}
-                        className="rounded-xl"
-                      />
+                    {/* Sección de Información Académica (intacta) */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">
+                        Información Académica
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <FormSelectField
+                          formField={form}
+                          nameField="career.career_id"
+                          label="Carrera"
+                          placeholder="Carrera"
+                          valueType="number"
+                          listRender={carreras.map((carrera) => ({
+                            key: carrera.id.toString(),
+                            textRender: carrera.name,
+                          }))}
+                          className="rounded-xl"
+                        />
+                        <FormSelectField
+                          formField={form}
+                          nameField="career_year"
+                          label="Año Académico"
+                          placeholder="Año académico"
+                          valueType="number"
+                          listRender={[1, 2, 3, 4, 5].map((year) => ({
+                            key: year.toString(),
+                            textRender: `${year}° Año`,
+                          }))}
+                          className="rounded-xl"
+                        />
+                        <FormSelectField
+                          formField={form}
+                          nameField="gender"
+                          label="Género"
+                          placeholder="Género"
+                          valueType="string"
+                          listRender={[
+                            { key: "M", textRender: "Masculino" },
+                            { key: "F", textRender: "Femenino" },
+                            { key: "O", textRender: "Otro" },
+                          ]}
+                          className="rounded-xl"
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Sección de Información Adicional (intacta con departamentos/distritos) */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">
-                      Información Adicional
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormSelectField
-                        formField={form}
-                        nameField="departmet_id"
-                        label="Departamento"
-                        placeholder="Seleccione departamento"
-                        valueType="number"
-                        listRender={departaments.map((d) => ({
-                          key: d.id.toString(),
-                          textRender: d.name,
-                        }))}
-                        className="rounded-xl"
-                      />
-                      <FormSelectField
-                        formField={form}
-                        nameField="district_id"
-                        label="Distrito"
-                        placeholder="Seleccione distrito"
-                        valueType="number"
-                        disabled={idDepartament === 0}
-                        listRender={departamentsDistrict.map((d) => ({
-                          key: d.id.toString(),
-                          textRender: d.name,
-                        }))}
-                        className="rounded-xl"
-                      />
-                      <FormTextField
-                        formField={form}
-                        nameField="internal_hours"
-                        label="Horas Internas"
-                        placeholder="Horas Internas"
-                        type="number"
-                        className="rounded-xl"
-                      />
-                      <FormTextField
-                        formField={form}
-                        nameField="external_hours"
-                        label="Horas Externas"
-                        placeholder="Horas Externas"
-                        type="number"
-                        className="rounded-xl"
-                      />
-                      <FormSelectField
-                        formField={form}
-                        nameField="active"
-                        label="Estado"
-                        placeholder="Estado"
-                        valueType="boolean"
-                        listRender={[
-                          { key: "true", textRender: "Activo" },
-                          { key: "false", textRender: "Inactivo" },
-                        ]}
-                        className="rounded-xl"
-                      />
-                      <FormTextField
-                        formField={form}
-                        nameField="address"
-                        label="Dirección"
-                        placeholder="Dirección"
-                        className="rounded-xl"
-                      />
+                    {/* Sección de Información Adicional (intacta con departamentos/distritos) */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">
+                        Información Adicional
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormSelectField
+                          formField={form}
+                          nameField="departmet_id"
+                          label="Departamento"
+                          placeholder="Seleccione departamento"
+                          valueType="number"
+                          listRender={departaments.map((d) => ({
+                            key: d.id.toString(),
+                            textRender: d.name,
+                          }))}
+                          className="rounded-xl"
+                        />
+                        <FormSelectField
+                          formField={form}
+                          nameField="district_id"
+                          label="Distrito"
+                          placeholder="Seleccione distrito"
+                          valueType="number"
+                          disabled={idDepartament === 0}
+                          listRender={departamentsDistrict.map((d) => ({
+                            key: d.id.toString(),
+                            textRender: d.name,
+                          }))}
+                          className="rounded-xl"
+                        />
+                        <FormTextField
+                          formField={form}
+                          nameField="internal_hours"
+                          label="Horas Internas"
+                          placeholder="Horas Internas"
+                          type="number"
+                          className="rounded-xl"
+                        />
+                        <FormTextField
+                          formField={form}
+                          nameField="external_hours"
+                          label="Horas Externas"
+                          placeholder="Horas Externas"
+                          type="number"
+                          className="rounded-xl"
+                        />
+                        <FormSelectField
+                          formField={form}
+                          nameField="active"
+                          label="Estado"
+                          placeholder="Estado"
+                          valueType="boolean"
+                          listRender={[
+                            { key: "true", textRender: "Activo" },
+                            { key: "false", textRender: "Inactivo" },
+                          ]}
+                          className="rounded-xl"
+                        />
+                        <FormTextField
+                          formField={form}
+                          nameField="address"
+                          label="Dirección"
+                          placeholder="Dirección"
+                          className="rounded-xl"
+                        />
+                      </div>
                     </div>
                   </div>
 
