@@ -1,64 +1,55 @@
-import { useCallback, useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+"use client"
 
-import {
-  BookOpen,
-  Plus,
-  MapPin,
-  Users,
-  Target,
-  Building,
-  FilePenLine,
-  Trash2,
-} from "lucide-react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ProjectSchema, type ProjectType } from "@/Types/ProyectType";
-import { useForm } from "react-hook-form";
-import { useProjects } from "@/hooks/use-projects";
-import { useDistrict } from "@/hooks/use-district";
-import type z from "zod";
-import Spinner from "@/components/Spinner";
-import { DialogDescription } from "@radix-ui/react-dialog";
-import { Form } from "@/components/ui/form";
-import FormTextField from "@/components/FormTextField";
-import FormSelectField from "@/components/FormSelectField";
-import { useDepartament } from "@/hooks/use-departament";
-import type { ColumnDef } from "@tanstack/react-table";
-import GeneralAlert from "@/components/GeneralAlert";
-import { Toaster } from "sonner";
-import TableStructure from "@/components/TableStructure";
-import { useTable } from "@/hooks/useTable";
-import { FormDatePicker } from "@/components/FormDatePicker";
-import { useCarrera } from "@/hooks/use-carrera"; // Assuming you have a useCarrera hook
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-// Removed as it's not needed
+import { BookOpen, Plus, MapPin, Users, Target, Building, FilePenLine, Trash2, CalendarIcon } from "lucide-react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { ProjectSchema, type ProjectType } from "@/Types/ProyectType"
+import { useForm } from "react-hook-form"
+import { useProjects } from "@/hooks/use-projects"
+import { useDistrict } from "@/hooks/use-district"
+import type z from "zod"
+import Spinner from "@/components/Spinner"
+import { DialogDescription } from "@radix-ui/react-dialog"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import FormTextField from "@/components/FormTextField"
+import FormSelectField from "@/components/FormSelectField"
+import { useDepartament } from "@/hooks/use-departament"
+import type { ColumnDef } from "@tanstack/react-table"
+import GeneralAlert from "@/components/GeneralAlert"
+import { Toaster } from "sonner"
+import TableStructure from "@/components/TableStructure"
+import { useTable } from "@/hooks/useTable"
+import { useCarrera } from "@/hooks/use-carrera"
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
 export default function ProjectsPage() {
   const {
     projects,
     loading,
+    loadingProject,
     handleDeleteProject,
+    getProjectDetails,
     open,
     setOpen,
     activeEdit,
     setActiveEdit,
     insertProject,
-  } = useProjects();
+  } = useProjects()
 
-  const [openAlertDelete, setOpenAlertDelete] = useState(false);
-  const [idDelete, setIdDelete] = useState<number>(0);
-  const { departaments } = useDepartament();
-  const { districts, getAllDepartamentsByDistrict, departamentsDistrict } =
-    useDistrict();
-  const [idDepartament, setIdDepartment] = useState<number>(0);
-  const { carreras } = useCarrera();
+  const [openAlertDelete, setOpenAlertDelete] = useState(false)
+  const [idDelete, setIdDelete] = useState<number>(0)
+  const { departaments } = useDepartament()
+  const { districts, getAllDepartamentsByDistrict, departamentsDistrict } = useDistrict()
+  const [idDepartament, setIdDepartment] = useState<number>(0)
+  const { carreras } = useCarrera()
+
+  const initialDateInputRef = useRef<HTMLInputElement | null>(null)
+  const finalDateInputRef = useRef<HTMLInputElement | null>(null)
 
   const form = useForm<z.infer<typeof ProjectSchema>>({
     resolver: zodResolver(ProjectSchema),
@@ -75,78 +66,105 @@ export default function ProjectsPage() {
       number_beneficiaries: 1,
       departament_id: 1,
       district_id: 1,
-      start_date: new Date().toISOString(),
-      end_date: new Date().toISOString(),
+      start_date: new Date().toISOString().split("T")[0],
+      end_date: new Date().toISOString().split("T")[0],
       active: true,
       institution_id: 1,
     },
-  });
+  })
 
   useEffect(() => {
     if (idDepartament) {
-      getAllDepartamentsByDistrict(idDepartament);
+      getAllDepartamentsByDistrict(idDepartament)
     }
-  }, [idDepartament, getAllDepartamentsByDistrict]);
+  }, [idDepartament, getAllDepartamentsByDistrict])
 
   useEffect(() => {
     const subscription = form.watch((value) => {
-      setIdDepartment(value.departament_id ?? 0); // Si es undefined, usa 0
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
+      setIdDepartment(value.departament_id ?? 0)
+    })
+    return () => subscription.unsubscribe()
+  }, [form])
 
   const openDialogDelete = useCallback((id: number) => {
-    setOpenAlertDelete(true);
-    setIdDelete(id);
-  }, []);
+    setOpenAlertDelete(true)
+    setIdDelete(id)
+  }, [])
 
   const editProject = useCallback(
-    (
-      id: number,
-      name: string,
-      description: string,
-      social_impact: string,
-      type_hours_id: number,
-      req_hours: number,
-      maximum_students: number,
-      req_min_year: number,
-      req_gender: string,
-      req_career: string,
-      number_beneficiaries: number,
-      departament_id: number,
-      district_id: number,
-      start_date: Date,
-      end_date: Date,
-      active: boolean,
-      institution_id: number
-    ) => {
-      setOpen(true);
-      setActiveEdit(true);
-      form.reset({
-        id,
-        name,
-        description,
-        social_impact,
-        type_hours_id,
-        req_hours,
-        maximum_students,
-        req_min_year,
-        req_gender,
-        req_career:
-          typeof req_career === "string"
-            ? parseInt(req_career, 10)
-            : req_career,
-        number_beneficiaries,
-        departament_id,
-        district_id,
-        start_date: start_date.toISOString(),
-        end_date: end_date.toISOString(),
-        active,
-        institution_id,
-      });
+    async (id: number) => {
+      setOpen(true)
+      setActiveEdit(true)
+
+      // Obtener los detalles completos del proyecto
+      const projectDetails = await getProjectDetails(id)
+
+      if (projectDetails) {
+        // Extraer el ID del departamento si district_id es un objeto
+        let departmentId = 1
+        let districtId = 1
+
+        if (typeof projectDetails.district_id === "object" && projectDetails.district_id !== null) {
+          districtId = projectDetails.district_id.id
+          if ("departament" in projectDetails.district_id && projectDetails.district_id.departament) {
+            departmentId = projectDetails.district_id.departament.id
+          }
+        } else if (typeof projectDetails.district_id === "number") {
+          districtId = projectDetails.district_id
+          // Buscar el departamento basado en el distrito
+          const district = districts.find((d) => d.id === districtId)
+          if (district && typeof district.departament_id === "number") {
+            departmentId = district.departament_id
+          }
+        }
+
+        // Extraer el ID de la carrera si req_career es un objeto
+        let careerId = 0
+        if (
+          typeof projectDetails.req_career === "object" &&
+          projectDetails.req_career !== null &&
+          "id" in projectDetails.req_career
+        ) {
+          careerId = projectDetails.req_career.id
+        } else if (typeof projectDetails.req_career === "number") {
+          careerId = projectDetails.req_career
+        }
+
+        // Establecer el departamento para cargar los distritos
+        setIdDepartment(departmentId)
+
+        // Esperar un poco para que se carguen los distritos
+        setTimeout(() => {
+          form.reset({
+            id: projectDetails.id,
+            name: projectDetails.name || "",
+            description: projectDetails.description || "",
+            social_impact: projectDetails.social_impact || "",
+            type_hours_id: projectDetails.type_hours_id || 1,
+            req_hours: projectDetails.req_hours || 1,
+            maximum_students: projectDetails.maximum_students || 1,
+            req_min_year: projectDetails.req_min_year || 1,
+            req_gender: projectDetails.req_gender || "",
+            req_career: careerId,
+            number_beneficiaries: projectDetails.number_beneficiaries || 1,
+            departament_id: departmentId,
+            district_id: districtId,
+            start_date:
+              typeof projectDetails.start_date === "string"
+                ? projectDetails.start_date.split("T")[0]
+                : new Date(projectDetails.start_date).toISOString().split("T")[0],
+            end_date:
+              typeof projectDetails.end_date === "string"
+                ? projectDetails.end_date.split("T")[0]
+                : new Date(projectDetails.end_date).toISOString().split("T")[0],
+            active: projectDetails.active ?? true,
+            institution_id: projectDetails.institution_id || 1,
+          })
+        }, 100)
+      }
     },
-    [form, setOpen, setActiveEdit]
-  );
+    [form, setOpen, setActiveEdit, getProjectDetails, districts],
+  )
 
   const columns: ColumnDef<ProjectType>[] = [
     {
@@ -155,9 +173,7 @@ export default function ProjectsPage() {
       cell: ({ row }) => (
         <div className="min-w-[150px]">
           <div className="font-medium">{row.original.name}</div>
-          <div className="text-xs text-muted-foreground line-clamp-2">
-            {row.original.description}
-          </div>
+          <div className="text-xs text-muted-foreground line-clamp-2">{row.original.description}</div>
         </div>
       ),
       size: 200,
@@ -169,11 +185,7 @@ export default function ProjectsPage() {
         <div className="text-center space-y-1">
           <div className="flex items-center justify-center gap-1">
             <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-              {row.original.type_hours_id === 1
-                ? "Internas"
-                : row.original.type_hours_id === 2
-                ? "Externas"
-                : "Ambas"}
+              {row.original.type_hours_id === 1 ? "Internas" : row.original.type_hours_id === 2 ? "Externas" : "Ambas"}
             </span>
           </div>
           <div className="text-sm">{row.original.req_hours} hrs</div>
@@ -191,8 +203,8 @@ export default function ProjectsPage() {
             {row.original.req_gender === "M"
               ? "♂ Masculino"
               : row.original.req_gender === "F"
-              ? "♀ Femenino"
-              : "⚥ Cualquiera"}
+                ? "♀ Femenino"
+                : "⚥ Cualquiera"}
           </div>
         </div>
       ),
@@ -202,40 +214,42 @@ export default function ProjectsPage() {
       id: "location",
       header: "Ubicación",
       cell: ({ row }) => {
-        // Verifica si tienes datos anidados como en Instituciones
-        if (row.original.district_id) {
+        if (
+          row.original.district_id &&
+          typeof row.original.district_id === "object" &&
+          "departament" in row.original.district_id
+        ) {
           return (
             <div className="min-w-[120px]">
               <div className="text-sm">
-                {districts.find((d) => d.id === row.original.district_id)
-                  ?.departament?.name || `ID: ${row.original.district_id}`}
+                {row.original.district_id.departament?.name || `ID: ${row.original.district_id.departament?.id}`}
               </div>
               <div className="text-xs text-muted-foreground">
-                {districts.find((d) => d.id === row.original.district_id)
-                  ?.name || `ID: ${row.original.district_id}`}
+                {row.original.district_id.name || `ID: ${row.original.district_id.id}`}
               </div>
             </div>
-          );
+          )
         }
 
-        // Fallback a la búsqueda manual si no hay datos anidados
         const depto = departaments.find(
-          (d) => d.id === row.original.departament_id
-        );
+          (d) =>
+            d.id ===
+            (typeof row.original.departament_id === "object"
+              ? row.original.departament_id.id
+              : row.original.departament_id),
+        )
         const district = districts.find(
-          (d) => d.id === row.original.district_id
-        );
+          (d) =>
+            d.id ===
+            (typeof row.original.district_id === "object" ? row.original.district_id.id : row.original.district_id),
+        )
 
         return (
           <div className="min-w-[120px]">
-            <div className="text-sm">
-              {depto?.name || `ID: ${row.original.departament_id}`}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {district?.name || `ID: ${row.original.district_id}`}
-            </div>
+            <div className="text-sm">{depto?.name || `ID: ${row.original.departament_id}`}</div>
+            <div className="text-xs text-muted-foreground">{district?.name || `ID: ${row.original.district_id}`}</div>
           </div>
-        );
+        )
       },
       size: 150,
     },
@@ -245,14 +259,10 @@ export default function ProjectsPage() {
       cell: ({ row }) => (
         <div className="text-center space-y-1">
           <div className="text-sm">
-            <span className="font-medium">{row.original.maximum_students}</span>{" "}
-            cupos
+            <span className="font-medium">{row.original.maximum_students}</span> cupos
           </div>
           <div className="text-sm">
-            <span className="font-medium">
-              {row.original.number_beneficiaries}
-            </span>{" "}
-            beneficiarios
+            <span className="font-medium">{row.original.number_beneficiaries}</span> beneficiarios
           </div>
         </div>
       ),
@@ -264,9 +274,7 @@ export default function ProjectsPage() {
       cell: ({ row }) => (
         <span
           className={`px-2 py-1 rounded-full text-xs ${
-            row.original.active
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
+            row.original.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
           }`}
         >
           {row.original.active ? "Activo" : "Inactivo"}
@@ -283,40 +291,8 @@ export default function ProjectsPage() {
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
-            onClick={() => {
-              editProject(
-                row.original.id ?? 0,
-                row.original.name,
-                row.original.description,
-                row.original.social_impact ?? "",
-                row.original.type_hours_id,
-                row.original.req_hours,
-                row.original.maximum_students,
-                row.original.req_min_year,
-                row.original.req_gender,
-                typeof row.original.req_career === "string"
-                  ? row.original.req_career
-                  : typeof row.original.req_career === "object" &&
-                    "name" in row.original.req_career
-                  ? row.original.req_career.name
-                  : "",
-                row.original.number_beneficiaries,
-                typeof row.original.departament_id === "number"
-                  ? row.original.departament_id
-                  : row.original.departament_id?.id ?? 0,
-                typeof row.original.district_id === "number"
-                  ? row.original.district_id
-                  : row.original.district_id?.id ?? 0,
-                typeof row.original.start_date === "string"
-                  ? new Date(row.original.start_date)
-                  : row.original.start_date,
-                typeof row.original.end_date === "string"
-                  ? new Date(row.original.end_date)
-                  : row.original.end_date,
-                row.original.active,
-                row.original.institution_id
-              );
-            }}
+            onClick={() => editProject(row.original.id ?? 0)}
+            disabled={loadingProject}
           >
             <FilePenLine className="w-4 h-4" />
           </Button>
@@ -332,65 +308,60 @@ export default function ProjectsPage() {
       ),
       size: 80,
     },
-  ];
+  ]
 
   const { globalFilter, setGlobalFilter, table } = useTable({
     data: projects,
     columns,
-  });
+  })
 
   const cancelDelete = async () => {
-    setOpenAlertDelete(false);
-    setIdDelete(0);
-  };
+    setOpenAlertDelete(false)
+    setIdDelete(0)
+  }
 
   const confirmDelete = () => {
-    handleDeleteProject(idDelete);
-    setOpenAlertDelete(false);
-    setIdDelete(0);
-  };
+    handleDeleteProject(idDelete)
+    setOpenAlertDelete(false)
+    setIdDelete(0)
+  }
 
   useEffect(() => {
     if (idDepartament > 0) {
-      getAllDepartamentsByDistrict(idDepartament);
+      getAllDepartamentsByDistrict(idDepartament)
     }
-  }, [idDepartament, getAllDepartamentsByDistrict]);
+  }, [idDepartament, getAllDepartamentsByDistrict])
 
   useEffect(() => {
     const subscription = form.watch((value) => {
       if (value.departament_id && value.departament_id !== idDepartament) {
-        setIdDepartment(value.departament_id);
+        setIdDepartment(value.departament_id)
       }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, idDepartament]);
+    })
+    return () => subscription.unsubscribe()
+  }, [form, idDepartament])
 
   return (
     <>
-      {loading && <Spinner />}
+      {(loading || loadingProject) && <Spinner />}
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Gestión de Proyectos</h1>
-            <p className="text-muted-foreground">
-              Administración de proyectos de horas sociales y profesionales
-            </p>
+            <p className="text-muted-foreground">Administración de proyectos de horas sociales y profesionales</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              className="rounded-xl px-6 py-2 shadow"
-              onClick={() => setOpen(true)}
-            >
+            <Button className="rounded-xl px-6 py-2 shadow" onClick={() => setOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Nuevo Proyecto
             </Button>
             <Dialog
               open={open}
               onOpenChange={(isOpen) => {
-                setOpen(isOpen);
+                setOpen(isOpen)
                 if (!isOpen) {
-                  setActiveEdit(false);
+                  setActiveEdit(false)
                   form.reset({
                     name: "",
                     description: "",
@@ -404,19 +375,17 @@ export default function ProjectsPage() {
                     number_beneficiaries: 1,
                     departament_id: 1,
                     district_id: 1,
-                    start_date: new Date().toISOString(),
-                    end_date: new Date().toISOString(),
+                    start_date: new Date().toISOString().split("T")[0],
+                    end_date: new Date().toISOString().split("T")[0],
                     active: true,
                     institution_id: 1,
-                  });
+                  })
                 }
               }}
             >
               <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto px-4 sm:px-6 lg:px-8">
                 <DialogHeader>
-                  <DialogTitle>
-                    {activeEdit ? "Editar Proyecto" : "Crear Proyecto"}
-                  </DialogTitle>
+                  <DialogTitle>{activeEdit ? "Editar Proyecto" : "Crear Proyecto"}</DialogTitle>
                   <DialogDescription>
                     {activeEdit
                       ? "Actualiza la información del proyecto"
@@ -425,15 +394,14 @@ export default function ProjectsPage() {
                 </DialogHeader>
                 <Form {...form}>
                   <form
-                    onSubmit={form.handleSubmit(insertProject)}
-                    className="space-y-4"
+                    onSubmit={form.handleSubmit(insertProject, (errors) => {
+                      console.log("Errores del formulario:", errors)
+                    })}
                   >
                     <div className="grid gap-6 py-4">
                       {/* Información básica */}
                       <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">
-                          Información Básica
-                        </h3>
+                        <h3 className="text-lg font-semibold">Información Básica</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="md:col-span-2">
                             <FormTextField
@@ -490,9 +458,7 @@ export default function ProjectsPage() {
 
                       {/* Requisitos */}
                       <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">
-                          Requisitos para Estudiantes
-                        </h3>
+                        <h3 className="text-lg font-semibold">Requisitos para Estudiantes</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                             <FormTextField
@@ -566,12 +532,10 @@ export default function ProjectsPage() {
                               nameField="district_id"
                               label="Distrito"
                               placeholder="Seleccione distrito"
-                              listRender={departamentsDistrict.map(
-                                (district) => ({
-                                  key: district.id.toString(),
-                                  textRender: district.name,
-                                })
-                              )}
+                              listRender={departamentsDistrict.map((district) => ({
+                                key: district.id.toString(),
+                                textRender: district.name,
+                              }))}
                             />
                           </div>
                         </div>
@@ -588,8 +552,6 @@ export default function ProjectsPage() {
 
                       {/* Configuración */}
                       <div className="space-y-4">
-                        {/* Configuración */}
-
                         <h3 className="text-lg font-semibold">Configuración</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
@@ -598,7 +560,7 @@ export default function ProjectsPage() {
                               nameField="active"
                               label="Estado"
                               placeholder="Seleccionar estado"
-                              valueType="string"
+                              valueType="boolean"
                               listRender={[
                                 { key: "true", textRender: "Activo" },
                                 { key: "false", textRender: "Inactivo" },
@@ -606,21 +568,84 @@ export default function ProjectsPage() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormDatePicker
-                            control={form.control}
-                            name="start_date"
-                            label="Fecha Inicio"
-                            fromDate={new Date()}
-                            toDate={new Date(form.watch("end_date"))}
-                          />
-                          <FormDatePicker
-                            control={form.control}
-                            name="end_date"
-                            label="Fecha Fin"
-                            fromDate={new Date(form.watch("start_date"))}
-                          />
-                        </div>
+                        <FormField
+                          control={form.control}
+                          name="start_date"
+                          render={({ field }) => {
+                            return (
+                              <FormItem>
+                                <FormLabel
+                                  htmlFor="input-fechaInicial"
+                                  className={cn(
+                                    form.formState.errors.start_date ? "text-red-600" : "dark:text-secondary",
+                                  )}
+                                >
+                                  Fecha inicial
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="relative dark:border-primary-dark">
+                                    <Input
+                                      type="date"
+                                      id="fechaInicial"
+                                      ref={initialDateInputRef}
+                                      className="w-full focus-visible:ring-primary dark:border-primary-dark"
+                                      value={field.value ? new Date(field.value).toISOString().split("T")[0] : ""}
+                                      onChange={(e) => field.onChange(e.target.value)}
+                                      min={new Date().toISOString().split("T")[0]}
+                                    />
+                                    <span
+                                      className="absolute right-3 top-1/2 transform -translate-y-1/2 dark:text-white cursor-pointer"
+                                      onClick={() => initialDateInputRef.current?.showPicker()}
+                                    >
+                                      <CalendarIcon className="h-5 w-5" />
+                                    </span>
+                                  </div>
+                                </FormControl>
+
+                                <FormMessage className="text-red-600" />
+                              </FormItem>
+                            )
+                          }}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="end_date"
+                          render={({ field }) => {
+                            return (
+                              <FormItem>
+                                <FormLabel
+                                  htmlFor="input-fechaFinal"
+                                  className={cn(
+                                    form.formState.errors.end_date ? "text-red-600" : "dark:text-secondary",
+                                  )}
+                                >
+                                  Fecha Final
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="relative dark:border-primary-dark">
+                                    <Input
+                                      type="date"
+                                      id="fechaFinal"
+                                      ref={finalDateInputRef}
+                                      className="w-full focus-visible:ring-primary dark:border-primary-dark"
+                                      value={field.value ? new Date(field.value).toISOString().split("T")[0] : ""}
+                                      onChange={(e) => field.onChange(e.target.value)}
+                                      min={new Date().toISOString().split("T")[0]}
+                                    />
+                                    <span
+                                      className="absolute right-3 top-1/2 transform -translate-y-1/2 dark:text-white cursor-pointer"
+                                      onClick={() => finalDateInputRef.current?.showPicker()}
+                                    >
+                                      <CalendarIcon className="h-5 w-5" />
+                                    </span>
+                                  </div>
+                                </FormControl>
+
+                                <FormMessage className="text-red-600" />
+                              </FormItem>
+                            )
+                          }}
+                        />
                       </div>
                     </div>
 
@@ -628,9 +653,7 @@ export default function ProjectsPage() {
                       <Button variant="outline" onClick={() => setOpen(false)}>
                         Cancelar
                       </Button>
-                      <Button type="submit">
-                        {activeEdit ? "Actualizar Proyecto" : "Crear Proyecto"}
-                      </Button>
+                      <Button type="submit">{activeEdit ? "Actualizar Proyecto" : "Crear Proyecto"}</Button>
                     </div>
                   </form>
                 </Form>
@@ -648,68 +671,63 @@ export default function ProjectsPage() {
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Proyectos
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Total Proyectos</CardTitle>
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">45</div>
+              <div className="text-2xl font-bold">{projects.length}</div>
               <p className="text-xs text-muted-foreground">+3 este mes</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Proyectos Activos
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Proyectos Activos</CardTitle>
               <Target className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">32</div>
-              <p className="text-xs text-muted-foreground">71% del total</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Estudiantes Asignados
-              </CardTitle>
-              <Users className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">287</div>
+              <div className="text-2xl font-bold">{projects.filter((p) => p.active).length}</div>
               <p className="text-xs text-muted-foreground">
-                Promedio 9 por proyecto
+                {Math.round((projects.filter((p) => p.active).length / projects.length) * 100) || 0}% del total
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Beneficiarios
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Estudiantes Asignados</CardTitle>
+              <Users className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {projects.reduce((acc, p) => acc + (p.maximum_students || 0), 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Promedio{" "}
+                {Math.round(projects.reduce((acc, p) => acc + (p.maximum_students || 0), 0) / projects.length) || 0} por
+                proyecto
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Beneficiarios</CardTitle>
               <Building className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12,500</div>
+              <div className="text-2xl font-bold">
+                {projects.reduce((acc, p) => acc + (p.number_beneficiaries || 0), 0).toLocaleString()}
+              </div>
               <p className="text-xs text-muted-foreground">Impacto acumulado</p>
             </CardContent>
           </Card>
         </div>
 
-        <TableStructure
-          globalFilter={globalFilter}
-          setGlobalFilter={setGlobalFilter}
-          columns={columns}
-          table={table}
-        />
+        <TableStructure globalFilter={globalFilter} setGlobalFilter={setGlobalFilter} columns={columns} table={table} />
       </div>
       <GeneralAlert
-        title="¿Estás seguro que deseas cancelar la referencia?"
+        title="¿Estás seguro que deseas eliminar este proyecto?"
         description="Esta acción no se puede deshacer."
         openAlert={openAlertDelete}
         setOpenAlert={setOpenAlertDelete}
@@ -719,5 +737,5 @@ export default function ProjectsPage() {
       />
       <Toaster position="top-right" />
     </>
-  );
+  )
 }
