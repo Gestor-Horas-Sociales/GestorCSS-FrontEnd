@@ -50,8 +50,6 @@ const reportData = {
 
 export default function ReportsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState("2024")
-  const [selectedCarrera, setSelectedCarrera] = useState("")
-  const [reportType, setReportType] = useState("general")
 
   const generateReport = (type: string) => {
     console.log(`Generando reporte: ${type}`)

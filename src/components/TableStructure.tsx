@@ -60,7 +60,6 @@ export default function TableStructure<T, R>({
                       column.toggleVisibility(!!value)
                     }
                   >
-                    {column.columnDef.meta?.label ?? column.id}
                   </DropdownMenuCheckboxItem>
                 );
               })}

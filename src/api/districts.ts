@@ -11,5 +11,5 @@ export const getDistricts = async () => {
 // Obtener un distrito por ID Departamento
 export const getDistrictByIdDepartament = async (id: number) => {
     const response = await api.get<Departament[]>(`/districts/department/${id}`);
-    return response.data.data as Departament[];
+    return response.data as Departament[];
 }
