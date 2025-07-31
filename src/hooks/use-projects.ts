@@ -64,8 +64,8 @@ export const useProjects = () => {
         maximum_students: Number(data.maximum_students),
         req_min_year: Number(data.req_min_year),
         req_gender: data.req_gender,
-        // Aseguramos que req_career siempre sea un número para el API
-        req_career: Number(data.req_career),
+        // req_career ya será un string gracias a z.coerce.string() en el schema
+        req_career: data.req_career,
         number_beneficiaries: Number(data.number_beneficiaries),
         district_id: Number(data.district_id),
         start_date: data.start_date,
@@ -96,8 +96,9 @@ export const useProjects = () => {
         toast.error("La fecha de fin es requerida")
         return
       }
-      if (isNaN(apiPayload.req_career) || apiPayload.req_career <= 0) {
-        toast.error("La carrera requerida debe ser un ID numérico válido")
+      // Validar req_career como string (ya debería serlo por z.coerce.string())
+      if (!apiPayload.req_career || apiPayload.req_career.trim() === "") {
+        toast.error("La carrera requerida es necesaria")
         return
       }
 
@@ -175,8 +176,7 @@ export const useProjects = () => {
 
       console.log("Error response data:", err.response?.data)
       console.log("Error status:", err.response?.status)
-      console.log("Error headers:", err.response?.headers)
-      console.log("Error config:", err.config)
+      console.log("Error headers:", err.config)
 
       let errorMessage = "Error al procesar el proyecto"
 

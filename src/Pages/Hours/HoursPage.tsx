@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Plus, Edit, XCircle, CalendarIcon } from "lucide-react" // Importar CalendarIcon
+import { Plus, Edit, XCircle, CalendarIcon } from "lucide-react"
 import { useHoursRecord } from "@/hooks/use-hours"
 import Spinner from "@/components/Spinner"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -9,12 +9,12 @@ import type { HoursRecordType } from "@/Types/HoursType"
 import { HoursRecordSchema } from "@/Types/HoursType"
 import { useTable } from "@/hooks/useTable"
 import TableStructure from "@/components/TableStructure"
-import { useCallback, useState, useEffect, useRef } from "react" // Importar useRef
+import { useCallback, useState, useEffect, useRef } from "react"
 import { Toaster } from "sonner"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form" // Importar FormField, etc.
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
 import FormTextField from "@/components/FormTextField"
 import { useEstudiantes } from "@/hooks/use-estudiantes"
 import FormSelectField from "@/components/FormSelectField"
@@ -22,21 +22,12 @@ import type { z } from "zod"
 import GeneralAlert from "@/components/GeneralAlert"
 import { Badge } from "@/components/ui/badge"
 import { useProjects } from "@/hooks/use-projects"
-import { Input } from "@/components/ui/input" // Importar Input
-import { cn } from "@/lib/utils" // Importar cn
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
 export default function HoursPage() {
-  const {
-    hours,
-    loading,
-    handleDeleteHoursRecord,
-    open,
-    setOpen,
-    activeEdit,
-    setActiveEdit,
-    insertHoursRecord,
-    getAllHoursRecord,
-  } = useHoursRecord()
+  const { hours, loading, handleDeleteHoursRecord, open, setOpen, activeEdit, setActiveEdit, insertHoursRecord } =
+    useHoursRecord()
 
   const { estudiantes } = useEstudiantes()
   const { projects, getAllProjects } = useProjects()
@@ -44,13 +35,12 @@ export default function HoursPage() {
   const [openAlertDelete, setOpenAlertDelete] = useState(false)
   const [idDelete, setIdDelete] = useState<number>(0)
 
-  // Ref para el input de fecha
+  // Referencia para el input de fecha
   const dateRegisterInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    getAllHoursRecord() // Asegúrate de cargar los registros al inicio
     getAllProjects()
-  }, [getAllHoursRecord, getAllProjects])
+  }, [getAllProjects])
 
   const form = useForm<z.infer<typeof HoursRecordSchema>>({
     resolver: zodResolver(HoursRecordSchema),
@@ -58,10 +48,10 @@ export default function HoursPage() {
       id: undefined,
       student_id: 0,
       project_id: 0,
-      date_register: undefined,
+      date_register: new Date(), // Establecer la fecha actual como valor por defecto
       description: "",
       hours: 0,
-      typeHours_id: 0,
+      type_hours_id: 0,
     },
   })
 
@@ -78,7 +68,7 @@ export default function HoursPage() {
       date_register: Date,
       description: string,
       hours: number,
-      typeHours_id: number,
+      type_hours_id: number,
     ) => {
       setOpen(true)
       setActiveEdit(true)
@@ -86,10 +76,10 @@ export default function HoursPage() {
         id,
         student_id,
         project_id,
-        date_register: new Date(date_register), // Asegura que sea un objeto Date
+        date_register: new Date(date_register), // Asegurarse de que sea un objeto Date
         description,
         hours,
-        typeHours_id,
+        type_hours_id,
       })
     },
     [form, setOpen, setActiveEdit],
@@ -162,10 +152,10 @@ export default function HoursPage() {
       },
     },
     {
-      accessorKey: "typeHours_id",
+      accessorKey: "type_hours_id",
       header: "Tipo de Horas",
       cell: ({ row }) => {
-        const typeHours = row.original.typeHours_id
+        const typeHours = row.original.type_hours_id
         return (
           <Badge variant={typeHours === 1 ? "default" : "secondary"}>{typeHours === 1 ? "Internas" : "Externas"}</Badge>
         )
@@ -202,7 +192,7 @@ export default function HoursPage() {
                   registro.date_register,
                   registro.description,
                   registro.hours,
-                  registro.typeHours_id,
+                  registro.type_hours_id,
                 )
               }
             >
@@ -256,10 +246,10 @@ export default function HoursPage() {
               form.reset({
                 student_id: 0,
                 project_id: 0,
-                date_register: undefined,
+                date_register: new Date(), // Resetear a la fecha actual para nuevos registros
                 description: "",
                 hours: 0,
-                typeHours_id: 0,
+                type_hours_id: 0,
               })
             }}
           >
@@ -277,10 +267,10 @@ export default function HoursPage() {
               form.reset({
                 student_id: 0,
                 project_id: 0,
-                date_register: undefined,
+                date_register: new Date(), // Resetear a la fecha actual al cerrar
                 description: "",
                 hours: 0,
-                typeHours_id: 0,
+                type_hours_id: 0,
               })
             }
           }}
@@ -308,10 +298,8 @@ export default function HoursPage() {
                         listRender={estudiantes.map((estudiante) => ({
                           key: estudiante.id.toString(),
                           textRender: `${estudiante.name} ${estudiante.lastname} - ${estudiante.student_id_card}`,
-                          value: estudiante.id, // Asegura que el valor sea el ID numérico
                         }))}
                         className="min-w-0"
-                        valueType="number" // Asegura que el valor se maneje como número
                       />
                     </div>
                     <div className="flex flex-col">
@@ -323,14 +311,13 @@ export default function HoursPage() {
                         listRender={projects.map((project) => ({
                           key: (project.id ?? "").toString(),
                           textRender: `${project.name}${project.description ? ` - ${project.description.substring(0, 20)}...` : ""}`,
-                          value: project.id, // Asegura que el valor sea el ID numérico
+                          value: project.id,
                         }))}
                         className="min-w-0"
-                        valueType="number" // Asegura que el valor se maneje como número
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="flex flex-col">
                       <FormTextField
                         formField={form}
@@ -342,67 +329,64 @@ export default function HoursPage() {
                       />
                     </div>
                     <div className="flex flex-col">
-                      {/* Implementación del input de fecha con useRef y CalendarIcon */}
-                      <FormField
-                        control={form.control}
-                        name="date_register"
-                        render={({ field }) => {
-                          return (
-                            <FormItem>
-                              <FormLabel
-                                htmlFor="date_register"
-                                className={cn(
-                                  form.formState.errors.date_register ? "text-red-600" : "dark:text-secondary",
-                                )}
-                              >
-                                Fecha de Registro
-                              </FormLabel>
-                              <FormControl>
-                                <div className="relative dark:border-primary-dark">
-                                  <Input
-                                    type="date"
-                                    id="date_register"
-                                    ref={dateRegisterInputRef}
-                                    className="w-full focus-visible:ring-primary dark:border-primary-dark"
-                                    value={field.value ? new Date(field.value).toISOString().split("T")[0] : ""}
-                                    onChange={(e) => {
-                                      const dateString = e.target.value
-                                      if (dateString) {
-                                        field.onChange(new Date(dateString)) // Convertir YYYY-MM-DD a objeto Date
-                                      } else {
-                                        field.onChange(undefined) // Manejar el caso de limpiar la fecha
-                                      }
-                                    }}
-                                    min={new Date().toISOString().split("T")[0]} // Fecha mínima: hoy
-                                  />
-                                  <span
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 dark:text-white cursor-pointer"
-                                    onClick={() => dateRegisterInputRef.current?.showPicker()}
-                                  >
-                                    <CalendarIcon className="h-5 w-5" />
-                                  </span>
-                                </div>
-                              </FormControl>
-                              <FormMessage className="text-red-600" />
-                            </FormItem>
-                          )
-                        }}
-                      />
-                    </div>
-                    <div className="flex flex-col">
                       <FormSelectField
                         formField={form}
-                        nameField="typeHours_id"
+                        nameField="type_hours_id"
                         label="Tipo de Horas"
                         placeholder="Seleccione tipo"
                         listRender={[
-                          { key: "1", textRender: "Internas", value: 1 },
-                          { key: "2", textRender: "Externas", value: 2 },
+                          { key: "1", textRender: "Internas" },
+                          { key: "2", textRender: "Externas" },
                         ]}
                         className="min-w-0"
-                        valueType="number" // Asegura que el valor se maneje como número
                       />
                     </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <FormField
+                      control={form.control}
+                      name="date_register"
+                      render={({ field }) => {
+                        // Asegurarse de que field.value sea un objeto Date válido
+                        const dateValue =
+                          field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value : new Date() // Usar la fecha actual si no es válida
+
+                        return (
+                          <FormItem>
+                            <FormLabel
+                              htmlFor="input-date-register"
+                              className={cn(
+                                form.formState.errors.date_register ? "text-red-600" : "dark:text-secondary",
+                              )}
+                            >
+                              Fecha
+                            </FormLabel>
+                            <FormControl>
+                              <div className="relative dark:border-primary-dark">
+                                <Input
+                                  type="date"
+                                  id="input-date-register"
+                                  ref={dateRegisterInputRef}
+                                  className="w-full focus-visible:ring-primary dark:border-primary-dark"
+                                  value={dateValue.toISOString().split("T")[0]} // Formato YYYY-MM-DD para input type="date"
+                                  onChange={(e) => {
+                                    const selectedDate = new Date(e.target.value)
+                                    field.onChange(selectedDate) // Guardar como Date object en el formulario
+                                  }}
+                                />
+                                <span
+                                  className="absolute right-3 top-1/2 transform -translate-y-1/2 dark:text-white cursor-pointer"
+                                  onClick={() => dateRegisterInputRef.current?.showPicker()}
+                                >
+                                  <CalendarIcon className="h-5 w-5" />
+                                </span>
+                              </div>
+                            </FormControl>
+                            <FormMessage className="text-red-600" />
+                          </FormItem>
+                        )
+                      }}
+                    />
                   </div>
                   <div className="flex flex-col">
                     <FormTextField

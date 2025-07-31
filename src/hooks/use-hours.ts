@@ -1,11 +1,15 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import type { HoursRecordType, HoursRecordSchema, HoursRecordPayload } from "@/Types/HoursType"
+import {
+  getAllHoursRecord as fetchAllHoursRecord,
+  deleteHoursRecord,
+  updateHoursRecord,
+  createHoursRecord,
+} from "@/api/hours"
+import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
-import { createHoursRecord, deleteHoursRecord, getAllHoursRecord, updateHoursRecord } from "@/api/hours"
-import type { HoursRecordPayload, HoursRecordType } from "@/Types/HoursType"
 import type { z } from "zod"
-import type { HoursRecordSchema } from "@/Types/HoursType"
 import type { AxiosError } from "axios"
 
 export const useHoursRecord = () => {
@@ -13,23 +17,6 @@ export const useHoursRecord = () => {
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [activeEdit, setActiveEdit] = useState(false)
-
-  const fetchAllHours = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await getAllHoursRecord()
-      setHours(data)
-    } catch (error) {
-      console.error("Error al obtener los registros de horas:", error)
-      toast.error("Error al cargar los registros de horas")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchAllHours()
-  }, [fetchAllHours])
 
   const handleDeleteHoursRecord = async (id: number) => {
     setLoading(true)
@@ -48,78 +35,82 @@ export const useHoursRecord = () => {
   const insertHoursRecord = async (data: z.infer<typeof HoursRecordSchema>) => {
     setLoading(true)
     try {
-      // Log para depuración
-      console.log("Datos recibidos en insertHoursRecord:", data)
-
-      // Construir el payload RE-INCLUYENDO typeHours_id
+      // Convertir el objeto Date a string ISO para el payload de la API
       const payload: HoursRecordPayload = {
         student_id: data.student_id,
         project_id: data.project_id,
-        date_register: data.date_register, // Ya es un objeto Date, Axios lo serializará a ISO string
+        date_register: data.date_register.toISOString(), // Convertir a string ISO
         description: data.description,
         hours: data.hours,
-        typeHours_id: data.typeHours_id, // RE-INCLUIDO: El backend podría necesitarlo
+        type_hours_id: data.type_hours_id,
       }
 
-      console.log("Payload final que se enviará:", payload)
-
       if (activeEdit) {
-        console.log("Actualizando registro de horas con ID:", data.id)
-        const response = await updateHoursRecord(Number(data.id), payload)
+        const response = await updateHoursRecord(Number(data.id), {
+          ...payload,
+          date_register: new Date(payload.date_register), // Convert back to Date
+        })
         setActiveEdit(false)
+        payload.date_register = payload.date_register.toString() // Ensure it's a string in ISO format
         setOpen(false)
         toast.success(response.data.message)
       } else {
-        console.log("Creando nuevo registro de horas")
-        const response = await createHoursRecord(payload)
+        const response = await createHoursRecord({
+          ...payload,
+          date_register: new Date(payload.date_register), // Convert to Date
+        })
         toast.success(response.data.message)
+        payload.date_register = payload.date_register.toString() // Ensure it's a string in ISO format
         setOpen(false)
       }
     } catch (error: unknown) {
-      console.error("Error al crear/actualizar el registro de horas:", error)
+      console.error("Error al crear el registro de horas:", error)
       const err = error as AxiosError<{ message?: string }>
       const message = err.response?.data?.message
-      const status = err.response?.status
-      const headers = err.response?.headers
-      const config = err.response?.config
-      const responseData = err.response?.data
-
-      // Mejorar el log para mostrar el contenido del objeto de datos de error
-      console.error("Error response data (full object):", responseData)
-      console.error("Error status:", status)
-      console.error("Error headers:", headers)
-      console.error("Error config:", config)
-
-      if (status === 400) {
-        toast.error(message || "Error de validación: Verifique los datos ingresados.")
-      } else if (status === 401 || status === 403) {
-        toast.error(message || "No autorizado para realizar esta acción.")
-      } else if (status === 422) {
-        toast.error(message || "Datos inválidos: Verifique los campos.")
-      } else if (status === 500) {
-        toast.error(message || "Error interno del servidor. Intente de nuevo más tarde.")
-        console.error("Error 500 - Posibles causas:")
-        console.error("1. Problema con la base de datos (ej. clave foránea no existente)")
-        console.error("2. Error en la validación del backend (ej. tipo de dato inesperado)")
-        console.error("3. Problema con las relaciones de datos (foreign keys)")
-        console.error("4. Error en el procesamiento de fechas")
-        console.error("5. Un campo que se envía es nulo o vacío cuando el backend espera un valor")
-      } else {
-        toast.error(message || "Error al crear/actualizar el registro de horas")
-      }
+      toast.error(message || "Error al crear el registro de horas")
     } finally {
       setLoading(false)
       fetchAllHours()
     }
   }
 
-  //Obtener horas por tipo de horas
+  const fetchAllHours = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await fetchAllHoursRecord()
+      setHours(data)
+    } catch (error) {
+      console.error("Error al obtener los registros de horas:", error)
+      toast.error("Error al cargar los registros de horas")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchAllHours()
+  }, [fetchAllHours])
+
   const getHoursByType = useCallback(
     (typeId: number) => {
-      return hours.filter((hour) => hour.typeHours_id === typeId)
+      return hours.filter((hour) => hour.type_hours_id === typeId)
     },
     [hours],
   )
+
+  const formatDateForInput = (date: Date | string | undefined): string => {
+    if (!date) return ""
+
+    const dateObj = typeof date === "string" ? new Date(date) : date
+
+    if (isNaN(dateObj.getTime())) return ""
+
+    const year = dateObj.getFullYear()
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0")
+    const day = String(dateObj.getDate()).padStart(2, "0")
+
+    return `${year}-${month}-${day}`
+  }
 
   return {
     hours,
@@ -130,7 +121,8 @@ export const useHoursRecord = () => {
     setActiveEdit,
     handleDeleteHoursRecord,
     insertHoursRecord,
-    getAllHoursRecord: fetchAllHours, // Opcional: si necesitas exponer esta función
+    getAllHoursRecord: fetchAllHours,
     getHoursByType,
+    formatDateForInput,
   }
 }

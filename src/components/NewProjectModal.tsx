@@ -41,7 +41,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
       maximum_students: 1,
       req_min_year: 1,
       req_gender: "",
-      req_career: 0, // Aseguramos que el valor por defecto sea numérico
+      req_career: "0", // Aseguramos que el valor por defecto sea un string
       number_beneficiaries: 1,
       departament_id: 1,
       district_id: 1,
@@ -122,7 +122,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
         maximum_students: project.maximum_students || 1,
         req_min_year: project.req_min_year || 1,
         req_gender: project.req_gender || "",
-        req_career: careerId, // Aseguramos que se setee el ID numérico
+        req_career: careerId.toString(), // Convertimos el ID numérico a string
         number_beneficiaries: project.number_beneficiaries || 1,
         departament_id: departmentId,
         district_id: districtId,
@@ -150,7 +150,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
       maximum_students: 1,
       req_min_year: 1,
       req_gender: "",
-      req_career: 0,
+      req_career: "0", // Ensure the default value is a string
       number_beneficiaries: 1,
       departament_id: 1,
       district_id: 1,

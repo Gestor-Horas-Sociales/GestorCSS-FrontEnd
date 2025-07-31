@@ -17,8 +17,8 @@ export const ProjectSchema = z.object({
   req_min_year: z.number().int().min(1, { message: "Años mínimos requeridos debe ser al menos 1" }),
 
   req_gender: z.string().min(1, { message: "Género requerido" }),
-  // Aseguramos que req_career sea siempre un número para el envío al API
-  req_career: z.number().int().min(1, { message: "Carrera requerida debe ser un número válido" }),
+  // Usamos z.coerce.string() para que Zod convierta automáticamente a string si recibe un número
+  req_career: z.coerce.string().min(1, { message: "Carrera requerida es requerida" }),
 
   number_beneficiaries: z.number().int().min(1, { message: "Número de beneficiarios debe ser al menos 1" }),
 
@@ -51,8 +51,8 @@ export interface ProjectType {
   req_min_year: number
 
   req_gender: string
-  // Permitir string, number, o CareerType para la data recibida del API
-  req_career: number | string | CareerType
+  // Puede ser string (ID) o CareerType (objeto completo)
+  req_career: string | CareerType
 
   number_beneficiaries: number
 
