@@ -3,22 +3,51 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { AxiosError } from "axios";
 import { StudentSchema } from "@/Types/StudentType";
-import type { StudentType } from "@/Types/StudentType";
+import type { StudentType, StudentExcel } from "@/Types/StudentType";
 import {
   getEstudiantes,
   getEstudianteById,
   createEstudiante,
   deleteEstudiante,
   updateEstudiante,
+  createEstudiantesFromExcel,
 } from "@/api/estudiantes";
 
 export const useEstudiantes = () => {
   const [estudiantes, setEstudiantes] = useState<StudentType[]>([]);
-  const [currentEstudiante, setCurrentEstudiante] = useState<StudentType | null>(null);
+  const [currentEstudiante, setCurrentEstudiante] =
+    useState<StudentType | null>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeEdit, setActiveEdit] = useState(false);
 
+  const insertStudentsFromExcel = async (students: StudentExcel[]) => {
+    if (!students.length) {
+      toast.error("No hay estudiantes para insertar");
+      return;
+    }
+
+    console.log("Insertando estudiantes desde Excel:", students);
+
+    setLoading(true);
+    try {
+      const response = await createEstudiantesFromExcel({ students });
+      console.log("Respuesta de insertar estudiantes desde Excel:", response.data);
+      toast.success(`Se insertaron ${response.data.inserted} estudiantes`);
+      if (response.data.errors?.length) {
+        console.warn("Errores en algunos registros:", response.data.errors);
+      }
+      await getAllStudents();
+    } catch (err) {
+      console.error("Error al insertar estudiantes desde Excel:", err);
+      const error = err as AxiosError<{ message?: string }>;
+      toast.error(
+        error.response?.data?.message || "Error al insertar estudiantes"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
   // Cargar todos los estudiantes
   const getAllStudents = useCallback(async () => {
     setLoading(true);
@@ -147,6 +176,7 @@ export const useEstudiantes = () => {
     insertStudent,
     prepareEdit,
     handleCloseModal,
-    calcularHoras
+    calcularHoras,
+    insertStudentsFromExcel,
   };
 };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Upload, Download, Plus, Eye, Edit, Trash2 } from "lucide-react";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
@@ -14,18 +15,25 @@ import { useCarrera } from "@/hooks/use-carrera";
 import { useForm } from "react-hook-form";
 import { useTable } from "@/hooks/useTable";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { StudentSchema, type StudentType } from "@/Types/StudentType";
+import {
+  StudentSchema,
+  type StudentType,
+  type StudentExcel,
+} from "@/Types/StudentType";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Spinner } from "react-bootstrap";
 import { Form } from "@/components/ui/form";
 import FormTextField from "@/components/FormTextField";
 import FormSelectField from "@/components/FormSelectField";
 import TableStructure from "@/components/TableStructure";
-import { Toaster } from "sonner";
+import { toast, Toaster } from "sonner";
 import GeneralAlert from "@/components/GeneralAlert";
 import type z from "zod";
 import { useDepartament } from "@/hooks/use-departament";
 import { useDistrict } from "@/hooks/use-district";
+import * as XLSX from "xlsx";
+import * as Papa from "papaparse";
+import { normalizarCarrera } from "@/lib/utils";
 
 export default function UsersPage() {
   // Hooks originales sin modificar
@@ -39,6 +47,7 @@ export default function UsersPage() {
     handleDeleteEstudiante,
     insertStudent,
     calcularHoras,
+    insertStudentsFromExcel,
   } = useEstudiantes();
 
   const { carreras } = useCarrera();
@@ -47,6 +56,8 @@ export default function UsersPage() {
   const [idDepartament, setIdDepartment] = useState<number>(0);
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
   const [idDelete, setIdDelete] = useState<number>(0);
+  const [data, setData] = useState<StudentExcel[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Formulario original intacto
   const form = useForm<z.infer<typeof StudentSchema>>({
@@ -270,6 +281,103 @@ export default function UsersPage() {
     return () => subscription.unsubscribe();
   }, [form]);
 
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileExt = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+    if (fileExt === "csv") {
+      readCSV(file);
+    } else if (fileExt === "xls" || fileExt === "xlsx") {
+      readExcel(file);
+    } else {
+      toast.error("Formato no soportado");
+    }
+  };
+
+  // Leer CSV con PapaParse
+  const readCSV = (file: File) => {
+    Papa.parse(file, {
+      header: true, // primera fila como encabezados
+      skipEmptyLines: true,
+      complete: (result) => {
+        const resultData = result.data as Record<string, string>[];
+
+        const formattedData: StudentExcel[] = resultData.map((row) => ({
+          card: row["Carnet"] || "",
+          lastName: row["Apellidos"] || "",
+          name: row["Nombres"] || "",
+          career: row["Carrera"]
+            ? normalizarCarrera(row["Carrera"].toString().toLowerCase())
+            : "",
+          hoursType: row["Tipo Horas"]
+            ? row["Tipo Horas"]
+                .toString()
+                .toLowerCase()
+                .replace(/^\w/, (c) => c.toUpperCase())
+            : "",
+          socialHours: row["Horas sociales"] || "",
+          email: row["Correo"] || "",
+        }));
+
+        setData(formattedData);
+      },
+    });
+  };
+
+  // Leer Excel con SheetJS
+  const readExcel = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result;
+      if (!result) return;
+
+      const workbook = XLSX.read(result, { type: "binary" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1 });
+
+      // Quitar encabezado y filtrar filas vacías
+      const dataRows = rows
+        .slice(1)
+        .filter((row) =>
+          row.some((cell) => cell && cell.toString().trim() !== "")
+        );
+
+      const formattedData: StudentExcel[] = dataRows.map((row) => ({
+        card: row[0] || "", // Columna 1 → Carnet
+        lastName: row[1] || "", // Columna 2 → Apellidos
+        name: row[2] || "", // Columna 3 → Nombres
+        career: row[3]
+          ? normalizarCarrera(row[3].toString().toLowerCase())
+          : "", // Columna 4 → Carrera
+        hoursType: row[4]
+          ? row[4]
+              .toString()
+              .toLowerCase()
+              .replace(/^\w/, (c) => c.toUpperCase())
+          : "", // Columna 5 → Tipo Horas
+        socialHours: row[5] || "", // Columna 6 → Horas sociales
+        email: row[6] || "", // Columna 7 → Correo
+      }));
+
+      setData(formattedData);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleSendToBackend = () => {
+    insertStudentsFromExcel(data);
+  };
+
+  console.log("data from file:", data);
+
   return (
     <>
       {loading && <Spinner />}
@@ -291,10 +399,29 @@ export default function UsersPage() {
               Nuevo Usuario
             </Button>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" className="rounded-xl">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={handleClick}
+              >
                 <Upload className="w-4 h-4 mr-2" />
                 Importar Excel
               </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFile}
+                accept=".csv,.xls,.xlsx"
+                className="hidden"
+              />
+              {data.length > 0 && (
+                <Button
+                  className="rounded-xl bg-green-600 text-white"
+                  onClick={handleSendToBackend}
+                >
+                  Subir {data.length} estudiantes
+                </Button>
+              )}
               <Button variant="outline" className="rounded-xl">
                 <Download className="w-4 h-4 mr-2" />
                 Exportar
@@ -330,10 +457,15 @@ export default function UsersPage() {
         >
           <DialogContent className="max-w-3xl rounded-3xl p-0">
             <Card className="rounded-3xl p-6">
-              <DialogHeader className="text-center mb-4">
+              <DialogHeader className="text-center">
                 <DialogTitle className="text-2xl font-bold text-primary">
                   {activeEdit ? "Editar Usuario" : "Registrar Nuevo Usuario"}
                 </DialogTitle>
+                <DialogDescription>
+                  {activeEdit
+                    ? "Modifica los datos del usuario."
+                    : "Completa los campos para registrar un nuevo usuario."}
+                </DialogDescription>
               </DialogHeader>
 
               <Form {...form}>
@@ -342,7 +474,7 @@ export default function UsersPage() {
                   className="space-y-6"
                 >
                   {/* Contenedor con scroll */}
-                  <div className="max-h-96 overflow-y-auto">
+                  <div className="max-h-96 overflow-y-auto px-1">
                     {/* Sección de Datos Personales (intacta) */}
                     <div>
                       <h3 className="text-lg font-semibold mb-2">
@@ -382,7 +514,7 @@ export default function UsersPage() {
                     </div>
 
                     {/* Sección de Información Académica (intacta) */}
-                    <div>
+                    <div className="mt-5">
                       <h3 className="text-lg font-semibold mb-2">
                         Información Académica
                       </h3>
@@ -428,7 +560,7 @@ export default function UsersPage() {
                     </div>
 
                     {/* Sección de Información Adicional (intacta con departamentos/distritos) */}
-                    <div>
+                    <div className="mt-5">
                       <h3 className="text-lg font-semibold mb-4">
                         Información Adicional
                       </h3>
