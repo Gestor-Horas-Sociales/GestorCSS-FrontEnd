@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Users, BookOpen, Clock, Award, Calendar, Target } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Users, BookOpen, Clock, Award, Calendar, Target } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -14,45 +14,98 @@ import {
   Cell,
   LineChart,
   Line,
-} from "recharts"
-
-// Datos de ejemplo - en producción vendrían de la API
-const dashboardData = {
-  metrics: {
-    total_estudiantes: 1250,
-    estudiantes_activos: 980,
-    proyectos_activos: 45,
-    horas_completadas_total: 125000,
-    promedio_avance: 68,
-  },
-  estudiantes_por_año: [
-    { año: "1°", cantidad: 280, completado: 45 },
-    { año: "2°", cantidad: 260, completado: 120 },
-    { año: "3°", cantidad: 240, completado: 180 },
-    { año: "4°", cantidad: 220, completado: 200 },
-    { año: "5°", cantidad: 250, completado: 235 },
-  ],
-  horas_por_tipo: [
-    { name: "Horas Sociales", value: 75000, color: "#3b82f6" },
-    { name: "Horas Profesionales", value: 50000, color: "#10b981" },
-  ],
-  proyectos_por_departamento: [
-    { departamento: "Ing. Civil", proyectos: 12, estudiantes: 180 },
-    { departamento: "Ing. Industrial", proyectos: 8, estudiantes: 145 },
-    { departamento: "Ing. Sistemas", proyectos: 15, estudiantes: 220 },
-    { departamento: "Arquitectura", proyectos: 10, estudiantes: 160 },
-  ],
-  impacto_reciente: [
-    { mes: "Ene", beneficiarios: 1200 },
-    { mes: "Feb", beneficiarios: 1450 },
-    { mes: "Mar", beneficiarios: 1680 },
-    { mes: "Abr", beneficiarios: 1920 },
-    { mes: "May", beneficiarios: 2100 },
-    { mes: "Jun", beneficiarios: 2350 },
-  ],
-}
+} from "recharts";
+import { useEstudiantes } from "@/hooks/use-estudiantes";
+import { useProjects } from "@/hooks/use-projects";
+import { useHoursRecord } from "@/hooks/use-hours";
 
 export default function DashboardPage() {
+  // 1. Extraes los datos del hook una sola vez
+  const { estudiantes } = useEstudiantes();
+  const activeStudents = estudiantes.filter(
+    (student) => student.active === true
+  );
+
+  const { projects } = useProjects();
+  const activeProyects = projects.filter((project) => project.active === true);
+
+  const { hours } = useHoursRecord();
+  const totalHorasCompletadas =
+    hours?.reduce((acc, record) => {
+      return acc + (Number(record.hours) || 0);
+    }, 0) || 0;
+
+  // 1. Calcular Total Horas Internas
+  const totalHorasInternas =
+    hours
+      ?.filter((record) => record.type_hours_id === 1) // Filtramos solo las de tipo 1
+      .reduce((acc, record) => acc + (Number(record.hours) || 0), 0) || 0;
+
+  // 2. Calcular Total Horas Externas
+  const totalHorasExternas =
+    hours
+      ?.filter((record) => record.type_hours_id === 2) // Filtramos solo las de tipo 2
+      .reduce((acc, record) => acc + (Number(record.hours) || 0), 0) || 0;
+
+  // Datos de ejemplo - mezclando datos reales con mocks
+  const dashboardData = {
+    metrics: {
+      // 2. Usas la variable directamente con protección (?.length || 0)
+      // Esto dice: "Si existe estudiantes, dame el largo, si no, pon 0"
+      total_estudiantes: estudiantes?.length || 0,
+      estudiantes_activos: activeStudents.length,
+      proyectos_activos: activeProyects.length,
+      horas_completadas_total: totalHorasCompletadas,
+      promedio_avance: 68,
+    },
+    estudiantes_por_año: [
+      {
+        año: "1°",
+        // Solución: ?. para seguridad, cambio de nombre a 'e', y .length al final
+        cantidad: estudiantes?.filter((e) => e.career_year === 1).length || 0,
+        completado: 45,
+      },
+      {
+        año: "2°",
+        cantidad: estudiantes?.filter((e) => e.career_year === 2).length || 0,
+        completado: 120,
+      },
+      {
+        año: "3°",
+        cantidad: estudiantes?.filter((e) => e.career_year === 3).length || 0,
+        completado: 180,
+      },
+      {
+        año: "4°",
+        cantidad: estudiantes?.filter((e) => e.career_year === 4).length || 0,
+        completado: 200,
+      },
+      {
+        año: "5°",
+        cantidad: estudiantes?.filter((e) => e.career_year === 5).length || 0,
+        completado: 235,
+      },
+    ],
+    horas_por_tipo: [
+      { name: "Horas Sociales", value: totalHorasInternas, color: "#3b82f6" },
+      { name: "Horas Profesionales", value: totalHorasExternas, color: "#10b981" },
+    ],
+    proyectos_por_departamento: [
+      { departamento: "Ing. Civil", proyectos: 12, estudiantes: 180 },
+      { departamento: "Ing. Industrial", proyectos: 8, estudiantes: 145 },
+      { departamento: "Ing. Sistemas", proyectos: 15, estudiantes: 220 },
+      { departamento: "Arquitectura", proyectos: 10, estudiantes: 160 },
+    ],
+    impacto_reciente: [
+      { mes: "Ene", beneficiarios: 1200 },
+      { mes: "Feb", beneficiarios: 1450 },
+      { mes: "Mar", beneficiarios: 1680 },
+      { mes: "Abr", beneficiarios: 1920 },
+      { mes: "May", beneficiarios: 2100 },
+      { mes: "Jun", beneficiarios: 2350 },
+    ],
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -60,7 +113,8 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold">Dashboard de Horas Sociales</h1>
           <p className="text-muted-foreground">
-            Monitoreo integral del programa de horas sociales - Facultad de Ingeniería y Arquitectura
+            Monitoreo integral del programa de horas sociales - Facultad de
+            Ingeniería y Arquitectura
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -75,11 +129,15 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Estudiantes</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Estudiantes
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.metrics.total_estudiantes.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {dashboardData.metrics.total_estudiantes.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
               <span className="text-green-600">+12%</span> vs año anterior
             </p>
@@ -88,25 +146,37 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estudiantes Activos</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Estudiantes Activos
+            </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.metrics.estudiantes_activos.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {dashboardData.metrics.estudiantes_activos.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {Math.round((dashboardData.metrics.estudiantes_activos / dashboardData.metrics.total_estudiantes) * 100)}%
-              del total
+              {Math.round(
+                (dashboardData.metrics.estudiantes_activos /
+                  dashboardData.metrics.total_estudiantes) *
+                  100
+              )}
+              % del total
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Proyectos Activos</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Proyectos Activos
+            </CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.metrics.proyectos_activos}</div>
+            <div className="text-2xl font-bold">
+              {dashboardData.metrics.proyectos_activos}
+            </div>
             <p className="text-xs text-muted-foreground">
               <span className="text-blue-600">8 nuevos</span> este mes
             </p>
@@ -115,11 +185,15 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Horas Completadas</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Horas Completadas
+            </CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.metrics.horas_completadas_total.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {dashboardData.metrics.horas_completadas_total.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
               Promedio: {dashboardData.metrics.promedio_avance}% completado
             </p>
@@ -141,8 +215,16 @@ export default function DashboardPage() {
                 <XAxis dataKey="año" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="cantidad" fill="#3b82f6" name="Total Estudiantes" />
-                <Bar dataKey="completado" fill="#10b981" name="Horas Completadas" />
+                <Bar
+                  dataKey="cantidad"
+                  fill="#3b82f6"
+                  name="Total Estudiantes"
+                />
+                <Bar
+                  dataKey="completado"
+                  fill="#10b981"
+                  name="Horas Completadas"
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -161,7 +243,9 @@ export default function DashboardPage() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent = 0 }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent = 0 }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -189,10 +273,14 @@ export default function DashboardPage() {
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex flex-col">
                     <span className="font-medium">{dept.departamento}</span>
-                    <span className="text-sm text-muted-foreground">{dept.estudiantes} estudiantes</span>
+                    <span className="text-sm text-muted-foreground">
+                      {dept.estudiantes} estudiantes
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{dept.proyectos} proyectos</Badge>
+                    <Badge variant="secondary">
+                      {dept.proyectos} proyectos
+                    </Badge>
                   </div>
                 </div>
               ))}
@@ -221,7 +309,9 @@ export default function DashboardPage() {
               </LineChart>
             </ResponsiveContainer>
             <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Total beneficiarios este año:</span>
+              <span className="text-muted-foreground">
+                Total beneficiarios este año:
+              </span>
               <span className="font-bold text-green-600">12,700 personas</span>
             </div>
           </CardContent>
@@ -242,7 +332,9 @@ export default function DashboardPage() {
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <div>
                 <p className="font-medium text-green-800">Meta Alcanzada</p>
-                <p className="text-sm text-green-600">90% estudiantes 4° año completaron horas</p>
+                <p className="text-sm text-green-600">
+                  90% estudiantes 4° año completaron horas
+                </p>
               </div>
             </div>
 
@@ -250,20 +342,26 @@ export default function DashboardPage() {
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               <div>
                 <p className="font-medium text-blue-800">Nuevos Proyectos</p>
-                <p className="text-sm text-blue-600">5 proyectos externos aprobados</p>
+                <p className="text-sm text-blue-600">
+                  5 proyectos externos aprobados
+                </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
               <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
               <div>
-                <p className="font-medium text-orange-800">Atención Requerida</p>
-                <p className="text-sm text-orange-600">120 registros pendientes de validación</p>
+                <p className="font-medium text-orange-800">
+                  Atención Requerida
+                </p>
+                <p className="text-sm text-orange-600">
+                  120 registros pendientes de validación
+                </p>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
