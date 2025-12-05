@@ -50,9 +50,7 @@ export default function UsersPage() {
     calcularHoras,
     insertStudentsFromExcel,
   } = useEstudiantes();
-
-  console.log("insertStudentsFromExcel", insertStudentsFromExcel)
-
+  
   const { carreras } = useCarrera();
   const { departaments } = useDepartament();
   const { departamentsDistrict, getAllDepartamentsByDistrict } = useDistrict();
@@ -62,11 +60,6 @@ export default function UsersPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [data, setData] = useState<StudentExcel[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-
-  console.log("data", data)
-  console.log("uploadProgress", uploadProgress)
-
-  setUploadProgress(100)
 
 
   // Formulario original intacto
