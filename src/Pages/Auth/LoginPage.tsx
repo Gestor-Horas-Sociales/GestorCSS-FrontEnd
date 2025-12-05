@@ -1,5 +1,3 @@
-"use client";
-
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/auth/authConfig";
 import api from "@/api/axios";
@@ -62,8 +60,7 @@ export default function LoginPage() {
         const user: UserType = jwtDecode(response.data.token);
 
         // Redirigir según el rol del usuario
-        const redirectPath =
-          user.role === 2 ? "/hours" : "/dashboard";
+        const redirectPath = user.role === 2 ? "/hours" : "/dashboard";
 
         navigate(redirectPath);
       }
@@ -134,18 +131,20 @@ export default function LoginPage() {
           {/* Panel derecho - Formulario de login */}
           <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
             <div className="w-full max-w-md">
+              <div className="flex justify-end lg:mb-8">
+                <ModeToggle />
+              </div>
               {/* Header móvil */}
               <div className="lg:hidden text-center mb-8 space-y-3">
-                <div className="flex justify-end">
-                  <ModeToggle />
-                </div>
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-slate-600">
                   <Shield className="w-8 h-8 text-white" />
                 </div>
                 <h1 className="text-2xl font-bold">
                   Universidad Centroamericana "José Simeón Cañas"
                 </h1>
-                <p>Sistema de Horas Sociales</p>
+                <p className="text-lg text-muted-foreground">
+                  Sistema Integral de Gestión de Horas Sociales
+                </p>
               </div>
 
               <Card className="border-slate-200 shadow-lg">

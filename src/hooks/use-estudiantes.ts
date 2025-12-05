@@ -48,6 +48,7 @@ export const useEstudiantes = () => {
       setLoading(false);
     }
   };
+
   // Cargar todos los estudiantes
   const getAllStudents = useCallback(async () => {
     setLoading(true);

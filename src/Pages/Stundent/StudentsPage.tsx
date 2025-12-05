@@ -21,7 +21,6 @@ import {
   type StudentExcel,
 } from "@/Types/StudentType";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Spinner } from "react-bootstrap";
 import { Form } from "@/components/ui/form";
 import FormTextField from "@/components/FormTextField";
 import FormSelectField from "@/components/FormSelectField";
@@ -31,9 +30,11 @@ import GeneralAlert from "@/components/GeneralAlert";
 import type z from "zod";
 import { useDepartament } from "@/hooks/use-departament";
 import { useDistrict } from "@/hooks/use-district";
+import Spinner from "@/components/Spinner";
 import * as XLSX from "xlsx";
 import * as Papa from "papaparse";
 import { normalizarCarrera } from "@/lib/utils";
+
 
 export default function UsersPage() {
   // Hooks originales sin modificar
@@ -56,8 +57,9 @@ export default function UsersPage() {
   const [idDepartament, setIdDepartment] = useState<number>(0);
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
   const [idDelete, setIdDelete] = useState<number>(0);
-  const [data, setData] = useState<StudentExcel[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [data, setData] = useState<StudentExcel[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   // Formulario original intacto
   const form = useForm<z.infer<typeof StudentSchema>>({
@@ -281,6 +283,103 @@ export default function UsersPage() {
     return () => subscription.unsubscribe();
   }, [form]);
 
+  const handleClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  /**
+   * Lee un archivo Excel (xls, xlsx) y lo transforma en JSON
+   * usando los encabezados de la primera fila.
+   */
+  const readExcel = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result;
+      if (!result) {
+        toast.error("No se pudo leer el archivo");
+        return;
+      }
+
+      try {
+        const workbook = XLSX.read(result, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+
+        const jsonData =
+          XLSX.utils.sheet_to_json<Record<string, string>>(sheet);
+
+        const formattedData: StudentExcel[] = jsonData.map((row) => ({
+          card: row["Carnet"] || "",
+          lastName: row["Apellidos"] || "",
+          name: row["Nombres"] || "",
+          career: row["Carrera"]
+            ? normalizarCarrera(row["Carrera"].toString())
+            : "",
+          hoursType: row["Tipo Horas"]
+            ? row["Tipo Horas"]
+                .toString()
+                .replace(/^\w/, (c) => c.toUpperCase())
+            : "",
+          socialHours: row["Horas sociales"] || "",
+          email: row["Correo"] || "",
+        }));
+
+        setData(formattedData);
+        console.log("Datos leídos:", formattedData);
+      } catch (error) {
+        console.error("Error al leer Excel:", error);
+        toast.error("Hubo un error al procesar el archivo Excel.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  /**
+   * Lee un archivo CSV y lo transforma en JSON
+   * usando los encabezados de la primera fila.
+   */
+  const readCSV = (file: File) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        const resultData = result.data as Record<string, string>[];
+
+        try {
+          const formattedData: StudentExcel[] = resultData.map((row) => ({
+            card: row["Carnet"] || "",
+            lastName: row["Apellidos"] || "",
+            name: row["Nombres"] || "",
+            career: row["Carrera"]
+              ? normalizarCarrera(row["Carrera"].toString())
+              : "",
+            hoursType: row["Tipo Horas"]
+              ? row["Tipo Horas"]
+                  .toString()
+                  .replace(/^\w/, (c) => c.toUpperCase())
+              : "",
+            socialHours: row["Horas sociales"] || "",
+            email: row["Correo"] || "",
+          }));
+
+          setData(formattedData);
+          console.log("Datos leídos:", formattedData);
+        } catch (error) {
+          console.error("Error al leer CSV:", error);
+          toast.error("Hubo un error al procesar el archivo CSV.");
+        }
+      },
+      error: (err) => {
+        console.error("Error con PapaParse:", err);
+        toast.error("No se pudo leer el archivo CSV.");
+      },
+    });
+  };
+
+  /**
+   * Manejador principal del input de archivo.
+   * Decide si llamar a readExcel o readCSV.
+   */
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -292,91 +391,9 @@ export default function UsersPage() {
     } else if (fileExt === "xls" || fileExt === "xlsx") {
       readExcel(file);
     } else {
-      toast.error("Formato no soportado");
+      toast.error("Formato no soportado. Sube un .csv, .xls o .xlsx");
     }
   };
-
-  // Leer CSV con PapaParse
-  const readCSV = (file: File) => {
-    Papa.parse(file, {
-      header: true, // primera fila como encabezados
-      skipEmptyLines: true,
-      complete: (result) => {
-        const resultData = result.data as Record<string, string>[];
-
-        const formattedData: StudentExcel[] = resultData.map((row) => ({
-          card: row["Carnet"] || "",
-          lastName: row["Apellidos"] || "",
-          name: row["Nombres"] || "",
-          career: row["Carrera"]
-            ? normalizarCarrera(row["Carrera"].toString().toLowerCase())
-            : "",
-          hoursType: row["Tipo Horas"]
-            ? row["Tipo Horas"]
-                .toString()
-                .toLowerCase()
-                .replace(/^\w/, (c) => c.toUpperCase())
-            : "",
-          socialHours: row["Horas sociales"] || "",
-          email: row["Correo"] || "",
-        }));
-
-        setData(formattedData);
-      },
-    });
-  };
-
-  // Leer Excel con SheetJS
-  const readExcel = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result;
-      if (!result) return;
-
-      const workbook = XLSX.read(result, { type: "binary" });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-
-      const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1 });
-
-      // Quitar encabezado y filtrar filas vacías
-      const dataRows = rows
-        .slice(1)
-        .filter((row) =>
-          row.some((cell) => cell && cell.toString().trim() !== "")
-        );
-
-      const formattedData: StudentExcel[] = dataRows.map((row) => ({
-        card: row[0] || "", // Columna 1 → Carnet
-        lastName: row[1] || "", // Columna 2 → Apellidos
-        name: row[2] || "", // Columna 3 → Nombres
-        career: row[3]
-          ? normalizarCarrera(row[3].toString().toLowerCase())
-          : "", // Columna 4 → Carrera
-        hoursType: row[4]
-          ? row[4]
-              .toString()
-              .toLowerCase()
-              .replace(/^\w/, (c) => c.toUpperCase())
-          : "", // Columna 5 → Tipo Horas
-        socialHours: row[5] || "", // Columna 6 → Horas sociales
-        email: row[6] || "", // Columna 7 → Correo
-      }));
-
-      setData(formattedData);
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  const handleClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleSendToBackend = () => {
-    insertStudentsFromExcel(data);
-  };
-
-  console.log("data from file:", data);
 
   return (
     <>
@@ -410,18 +427,10 @@ export default function UsersPage() {
               <input
                 type="file"
                 ref={fileInputRef}
-                onChange={handleFile}
                 accept=".csv,.xls,.xlsx"
                 className="hidden"
+                onChange={handleFile}
               />
-              {data.length > 0 && (
-                <Button
-                  className="rounded-xl bg-green-600 text-white"
-                  onClick={handleSendToBackend}
-                >
-                  Subir {data.length} estudiantes
-                </Button>
-              )}
               <Button variant="outline" className="rounded-xl">
                 <Download className="w-4 h-4 mr-2" />
                 Exportar
