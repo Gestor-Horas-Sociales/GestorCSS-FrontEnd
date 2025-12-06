@@ -34,7 +34,16 @@ import Spinner from "@/components/Spinner";
 import * as XLSX from "xlsx";
 import * as Papa from "papaparse";
 import { normalizarCarrera } from "@/lib/utils";
-
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 export default function UsersPage() {
   // Hooks originales sin modificar
@@ -50,7 +59,7 @@ export default function UsersPage() {
     calcularHoras,
     insertStudentsFromExcel,
   } = useEstudiantes();
-  
+
   const { carreras } = useCarrera();
   const { departaments } = useDepartament();
   const { departamentsDistrict, getAllDepartamentsByDistrict } = useDistrict();
@@ -58,9 +67,9 @@ export default function UsersPage() {
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
   const [idDelete, setIdDelete] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [data, setData] = useState<StudentExcel[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-
+  const [openProgress, setOpenProgress] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [totalRows, setTotalRows] = useState(0);
 
   // Formulario original intacto
   const form = useForm<z.infer<typeof StudentSchema>>({
@@ -288,6 +297,29 @@ export default function UsersPage() {
     fileInputRef.current?.click();
   };
 
+  const procesarImportacion = async (rows: StudentExcel[]) => {
+    try {
+      for (let i = 0; i < rows.length; i++) {
+        const student = rows[i];
+
+        // Aquí mandas a tu API
+        await insertStudentsFromExcel([student]);
+
+        // Actualizas la barra de progreso
+        setProgress(Math.round(((i + 1) / rows.length) * 100));
+      }
+
+      toast.success("Importación completada");
+    } catch (error) {
+      console.error(error);
+      toast.error("Ocurrió un error durante la importación");
+    } finally {
+      setTimeout(() => {
+        setOpenProgress(false);
+      }, 800);
+    }
+  };
+
   /**
    * Lee un archivo Excel (xls, xlsx) y lo transforma en JSON
    * usando los encabezados de la primera fila.
@@ -325,7 +357,11 @@ export default function UsersPage() {
           email: row["Correo"] || "",
         }));
 
-        setData(formattedData);
+        setTotalRows(formattedData.length);
+        setProgress(0);
+        setOpenProgress(true);
+        procesarImportacion(formattedData);
+
         console.log("Datos leídos:", formattedData);
       } catch (error) {
         console.error("Error al leer Excel:", error);
@@ -363,7 +399,10 @@ export default function UsersPage() {
             email: row["Correo"] || "",
           }));
 
-          setData(formattedData);
+          setTotalRows(formattedData.length);
+          setProgress(0);
+          setOpenProgress(true);
+          procesarImportacion(formattedData);
           console.log("Datos leídos:", formattedData);
         } catch (error) {
           console.error("Error al leer CSV:", error);
@@ -394,6 +433,8 @@ export default function UsersPage() {
     } else {
       toast.error("Formato no soportado. Sube un .csv, .xls o .xlsx");
     }
+
+    e.target.value = "";
   };
 
   return (
@@ -676,6 +717,34 @@ export default function UsersPage() {
         onCancel={() => cancelDelete()}
       />
       <Toaster position="top-right" />
+
+      <AlertDialog open={openProgress}>
+        <AlertDialogContent className="max-w-sm p-6 rounded-xl z-[9999]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Importando Estudiantes...</AlertDialogTitle>
+            <AlertDialogDescription>
+              Procesando {progress}% — {(progress / 100) * totalRows}/
+              {totalRows} registros
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="mt-4">
+            <Progress value={progress} className="h-3" />
+          </div>
+
+          <p className="text-sm text-muted-foreground mt-2">
+            No cierres esta ventana mientras se completa la importación.
+          </p>
+
+          {/* Oculta el contenedor de botones del AlertDialog */}
+          <div className="hidden">
+            <AlertDialogFooter>
+              <AlertDialogCancel />
+              <AlertDialogAction />
+            </AlertDialogFooter>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
