@@ -17,20 +17,9 @@ import { useNavigate } from "react-router";
 import type { UserType } from "@/Types/UserType";
 import { Toaster } from "sonner";
 import { jwtDecode } from "jwt-decode";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Spinner from "@/components/Spinner";
 import { useAuthStore } from "@/store/authStore";
-
-interface AxiosErrorLike {
-  status?: number;
-  response?: {
-    status?: number;
-    data?: {
-      message?: string;
-      user?: UserType;
-    };
-  };
-}
 
 export default function LoginPage() {
   const { instance } = useMsal();
@@ -40,47 +29,51 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
 
-  const handleMicrosoftLogin = async () => {
+  const handledRef = useRef(false);
+
+  useEffect(() => {
+    if (handledRef.current) return;
+    handledRef.current = true;
+
     setLoading(true);
 
-    try {
-      const loginResponse = await instance.loginPopup(loginRequest);
-      const idToken = loginResponse.idToken;
+    instance.handleRedirectPromise().then(async (result) => {
+      try {
+        if (!result) {
+          setLoading(false);
+          return;
+        }
 
-      const response = await api.post("/auth/microsoft", {
-        accessToken: idToken,
-      });
+        const idToken = result.idToken;
 
-      if (response.status === 200) {
-        // Obtener los datos del usuario desde la respuesta
+        const response = await api.post("/auth/microsoft", {
+          accessToken: idToken,
+        });
+
         localStorage.setItem("token", response.data.token);
-
-        login(); // Actualizar el estado de autenticación
+        login();
 
         const user: UserType = jwtDecode(response.data.token);
-
-        // Redirigir según el rol del usuario
         const redirectPath = user.role === 2 ? "/hours" : "/dashboard";
 
         navigate(redirectPath);
-      }
-    } catch (error) {
-      const axiosError = error as AxiosErrorLike;
+      } catch (error: any) {
+        console.error("Error en login con Microsoft:", error);
 
-      console.error("Error de Axios:", axiosError);
+        const message =
+          error?.response?.data?.message || "Error al iniciar sesión";
 
-      if (axiosError.status === 401) {
-        toast.error(
-          axiosError.response?.data?.message || "Credenciales inválidas"
-        );
-      } else if (axiosError.status === 403) {
-        toast.error("No tienes permisos para acceder al sistema");
-      } else {
-        toast.error("Error al iniciar sesión. Por favor, inténtelo de nuevo.");
+        toast.error(message);
+
+        instance.setActiveAccount(null);
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
+    });
+  }, []);
+
+  const handleMicrosoftLogin = async () => {
+    instance.loginRedirect(loginRequest);
   };
 
   return (
