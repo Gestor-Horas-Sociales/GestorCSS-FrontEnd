@@ -18,146 +18,129 @@ import {
 import { useEstudiantes } from "@/hooks/use-estudiantes";
 import { useProjects } from "@/hooks/use-projects";
 import { useHoursRecord } from "@/hooks/use-hours";
+import { useCarrera } from "@/hooks/use-carrera";
+import { useDepartament } from "@/hooks/use-departament";
 
 export default function DashboardPage() {
-  // 1. Extraes los datos del hook una sola vez
+  // --- 1. HOOKS Y DATOS ---
   const { estudiantes } = useEstudiantes();
-  const activeStudents = estudiantes.filter(
-    (student) => student.active === true
-  );
-
   const { projects } = useProjects();
-  const activeProyects = projects.filter((project) => project.active === true);
-
   const { hours } = useHoursRecord();
-  const totalHorasCompletadas =
-    hours?.reduce((acc, record) => {
+  const { carreras } = useCarrera(); // Catálogo de carreras (Ing. Civil, etc.)
+  const { departaments } = useDepartament(); // Catálogo geográfico (San Salvador, etc.)
+
+  // --- 2. CÁLCULOS GENERALES ---
+  
+  // Estudiantes Activos
+  const activeStudents = estudiantes?.filter((s) => s.active === true) || [];
+
+  // Proyectos Activos
+  const activeProyects = projects?.filter((p) => p.active === true) || [];
+
+  // Total Beneficiarios (Corregido: Agregado valor inicial 0 y validación de array)
+  const totalBeneficiarios = projects?.reduce((acc, project) => {
+    return acc + (Number(project.number_beneficiaries) || 0);
+  }, 0) || 0;
+
+  // Horas Totales
+  const totalHorasCompletadas = hours?.reduce((acc, record) => {
       return acc + (Number(record.hours) || 0);
     }, 0) || 0;
 
-  // 1. Calcular Total Horas Internas
-  const totalHorasInternas =
-    hours
-      ?.filter((record) => record.type_hours_id === 1) // Filtramos solo las de tipo 1
+  // Horas Internas (Tipo 1)
+  const totalHorasInternas = hours
+      ?.filter((record) => record.type_hours_id === 1)
       .reduce((acc, record) => acc + (Number(record.hours) || 0), 0) || 0;
 
-  // 2. Calcular Total Horas Externas
-  const totalHorasExternas =
-    hours
-      ?.filter((record) => record.type_hours_id === 2) // Filtramos solo las de tipo 2
+  // Horas Externas (Tipo 2)
+  const totalHorasExternas = hours
+      ?.filter((record) => record.type_hours_id === 2)
       .reduce((acc, record) => acc + (Number(record.hours) || 0), 0) || 0;
 
-  // Datos de ejemplo - mezclando datos reales con mocks
+
+  // --- 3. CÁLCULOS COMPLEJOS (Cruces de datos) ---
+
+  // A. Proyectos por Carrera (Dinámico)
+  const dataProyectosPorCarrera = carreras?.map((carrera) => {
+    // 1. Filtramos proyectos de esta carrera
+    const proyectosDeCarrera = projects?.filter(p => p.district_id === carrera.id) || [];
+    
+    // 2. Filtramos estudiantes de esta carrera
+    const estudiantesDeCarrera = estudiantes?.filter(e => e.career?.id === carrera.id) || [];
+
+    // 3. Sumamos beneficiarios de estos proyectos
+    const beneficiariosCarrera = proyectosDeCarrera.reduce((acc, p) => acc + (Number(p.number_beneficiaries) || 0), 0);
+
+    return {
+      departamento: carrera.name, // Usamos 'name' de la carrera como etiqueta
+      proyectos: proyectosDeCarrera.length,
+      estudiantes: estudiantesDeCarrera.length,
+      beneficiarios: beneficiariosCarrera // Dato extra solicitado
+    };
+  }) || [];
+
+  // B. Proyectos por Departamento Geográfico (Dinámico)
+  const dataProyectosPorDepto = departaments?.map((depto) => {
+    // 1. Filtramos proyectos en este departamento geográfico
+    const proyectosEnDepto = projects?.filter(p => p.departament_id === depto.id) || [];
+    
+    // 2. Sumamos estudiantes asignados a esos proyectos (Si tienes ese dato en el proyecto)
+    // Nota: Asumo que 'assigned_student_count' existe en el proyecto, si no, pon 0 o calcula diferente
+    const estudiantesEnDepto = proyectosEnDepto.reduce((acc, p) => acc + (Number(p.maximum_students) || 0), 0);
+
+    return {
+      departamento: depto.name, // Nombre del depto (San Salvador, etc.)
+      proyectos: proyectosEnDepto.length,
+      estudiantes: estudiantesEnDepto 
+    };
+  }) || [];
+
+
+  // --- 4. ARMADO DEL DASHBOARD DATA ---
   const dashboardData = {
     metrics: {
       total_estudiantes: estudiantes?.length || 0,
       estudiantes_activos: activeStudents.length,
       proyectos_activos: activeProyects.length,
       horas_completadas_total: totalHorasCompletadas,
-      promedio_avance: 68,
+      total_beneficiarios: totalBeneficiarios, // Nueva métrica agregada
+      promedio_avance: 68, // Esto requeriría un cálculo más complejo de horas esperadas vs reales
     },
-    estudiantes_por_año: [
-      {
-        año: "1°",
-        cantidad: estudiantes?.filter((e) => e.career_year === 1).length || 0,
-        completado:
-          estudiantes?.filter(
-            (e) =>
-              e.career_year === 1 &&
-              (Number(e.external_hours) || 0) +
-                (Number(e.internal_hours) || 0) >=
-                600
-          ).length || 0,
-      },
-      {
-        año: "2°",
-        cantidad: estudiantes?.filter((e) => e.career_year === 2).length || 0,
-        completado:
-          estudiantes?.filter(
-            (e) =>
-              e.career_year === 2 &&
-              (Number(e.external_hours) || 0) +
-                (Number(e.internal_hours) || 0) >=
-                600
-          ).length || 0,
-      },
-      {
-        año: "3°",
-        cantidad: estudiantes?.filter((e) => e.career_year === 3).length || 0,
-        completado:
-          estudiantes?.filter(
-            (e) =>
-              e.career_year === 3 &&
-              (Number(e.external_hours) || 0) +
-                (Number(e.internal_hours) || 0) >=
-                600
-          ).length || 0,
-      },
-      {
-        año: "4°",
-        cantidad: estudiantes?.filter((e) => e.career_year === 4).length || 0,
-        completado:
-          estudiantes?.filter(
-            (e) =>
-              e.career_year === 4 &&
-              (Number(e.external_hours) || 0) +
-                (Number(e.internal_hours) || 0) >=
-                600
-          ).length || 0,
-      },
-      {
-        año: "5°",
-        cantidad: estudiantes?.filter((e) => e.career_year === 5).length || 0,
-        completado:
-          estudiantes?.filter(
-            (e) =>
-              e.career_year === 5 &&
-              (Number(e.external_hours) || 0) +
-                (Number(e.internal_hours) || 0) >=
-                600
-          ).length || 0,
-      },
-    ],
+    
+    // Lógica optimizada con .map para los años
+    estudiantes_por_año: [1, 2, 3, 4, 5].map((year) => ({
+      año: `${year}°`,
+      cantidad: estudiantes?.filter((e) => e.career_year === year).length || 0,
+      completado: estudiantes?.filter(
+        (e) =>
+          e.career_year === year &&
+          (Number(e.external_hours) || 0) + (Number(e.internal_hours) || 0) >= 600
+      ).length || 0,
+    })),
+
     horas_por_tipo: [
       { name: "Horas Internas", value: totalHorasInternas, color: "#3b82f6" },
       { name: "Horas Externas", value: totalHorasExternas, color: "#10b981" },
     ],
-    proyectos_por_carrera: [
-      { departamento: "Arquitectura", proyectos: 15, estudiantes: 180 },
-      { departamento: "Ing. Civil", proyectos: 12, estudiantes: 160 },
-      { departamento: "Ing. Industrial", proyectos: 22, estudiantes: 290 },
-      { departamento: "Ing. Informática", proyectos: 25, estudiantes: 310 },
-      { departamento: "Ing. Eléctrica", proyectos: 8, estudiantes: 85 },
-      { departamento: "Ing. Mecánica", proyectos: 10, estudiantes: 115 },
-      { departamento: "Ing. Química", proyectos: 7, estudiantes: 90 },
-      { departamento: "Ing. de Alimentos", proyectos: 5, estudiantes: 55 },
-      { departamento: "Ing. Energética", proyectos: 4, estudiantes: 40 },
-    ],
-    proyectos_por_departamento: [
-      { departamento: "Ahuachapán", proyectos: 5, estudiantes: 45 },
-      { departamento: "Santa Ana", proyectos: 18, estudiantes: 150 },
-      { departamento: "Sonsonate", proyectos: 12, estudiantes: 90 },
-      { departamento: "Chalatenango", proyectos: 8, estudiantes: 60 },
-      { departamento: "La Libertad", proyectos: 25, estudiantes: 210 },
-      { departamento: "San Salvador", proyectos: 40, estudiantes: 350 },
-      { departamento: "Cuscatlán", proyectos: 6, estudiantes: 40 },
-      { departamento: "La Paz", proyectos: 9, estudiantes: 75 },
-      { departamento: "Cabañas", proyectos: 4, estudiantes: 30 },
-      { departamento: "San Vicente", proyectos: 7, estudiantes: 55 },
-      { departamento: "Usulután", proyectos: 10, estudiantes: 85 },
-      { departamento: "San Miguel", proyectos: 20, estudiantes: 180 },
-      { departamento: "Morazán", proyectos: 5, estudiantes: 35 },
-      { departamento: "La Unión", proyectos: 8, estudiantes: 65 },
-    ],
+
+    // Usamos los datos calculados arriba
+    proyectos_por_carrera: dataProyectosPorCarrera,
+    
+    // Usamos los datos calculados arriba
+    proyectos_por_departamento: dataProyectosPorDepto,
+
+    // Este lo dejamos hardcoded por ahora, a menos que tengas fecha en los beneficiarios
     impacto_reciente: [
       { mes: "Ene", beneficiarios: 1200 },
       { mes: "Feb", beneficiarios: 1450 },
       { mes: "Mar", beneficiarios: 1680 },
       { mes: "Abr", beneficiarios: 1920 },
       { mes: "May", beneficiarios: 2100 },
-      { mes: "Jun", beneficiarios: 2350 },
+      { mes: "Jun", beneficiarios: totalBeneficiarios }, // Al menos el último mes real
     ],
   };
+
+  
 
   return (
     <div className="p-6 space-y-6">
@@ -340,7 +323,6 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-
 
         <Card>
           <CardHeader>
