@@ -50,8 +50,6 @@ export default function DashboardPage() {
   // Datos de ejemplo - mezclando datos reales con mocks
   const dashboardData = {
     metrics: {
-      // 2. Usas la variable directamente con protección (?.length || 0)
-      // Esto dice: "Si existe estudiantes, dame el largo, si no, pon 0"
       total_estudiantes: estudiantes?.length || 0,
       estudiantes_activos: activeStudents.length,
       proyectos_activos: activeProyects.length,
@@ -61,40 +59,95 @@ export default function DashboardPage() {
     estudiantes_por_año: [
       {
         año: "1°",
-        // Solución: ?. para seguridad, cambio de nombre a 'e', y .length al final
         cantidad: estudiantes?.filter((e) => e.career_year === 1).length || 0,
-        completado: 45,
+        completado:
+          estudiantes?.filter(
+            (e) =>
+              e.career_year === 1 &&
+              (Number(e.external_hours) || 0) +
+                (Number(e.internal_hours) || 0) >=
+                600
+          ).length || 0,
       },
       {
         año: "2°",
         cantidad: estudiantes?.filter((e) => e.career_year === 2).length || 0,
-        completado: 120,
+        completado:
+          estudiantes?.filter(
+            (e) =>
+              e.career_year === 2 &&
+              (Number(e.external_hours) || 0) +
+                (Number(e.internal_hours) || 0) >=
+                600
+          ).length || 0,
       },
       {
         año: "3°",
         cantidad: estudiantes?.filter((e) => e.career_year === 3).length || 0,
-        completado: 180,
+        completado:
+          estudiantes?.filter(
+            (e) =>
+              e.career_year === 3 &&
+              (Number(e.external_hours) || 0) +
+                (Number(e.internal_hours) || 0) >=
+                600
+          ).length || 0,
       },
       {
         año: "4°",
         cantidad: estudiantes?.filter((e) => e.career_year === 4).length || 0,
-        completado: 200,
+        completado:
+          estudiantes?.filter(
+            (e) =>
+              e.career_year === 4 &&
+              (Number(e.external_hours) || 0) +
+                (Number(e.internal_hours) || 0) >=
+                600
+          ).length || 0,
       },
       {
         año: "5°",
         cantidad: estudiantes?.filter((e) => e.career_year === 5).length || 0,
-        completado: 235,
+        completado:
+          estudiantes?.filter(
+            (e) =>
+              e.career_year === 5 &&
+              (Number(e.external_hours) || 0) +
+                (Number(e.internal_hours) || 0) >=
+                600
+          ).length || 0,
       },
     ],
     horas_por_tipo: [
-      { name: "Horas Sociales", value: totalHorasInternas, color: "#3b82f6" },
-      { name: "Horas Profesionales", value: totalHorasExternas, color: "#10b981" },
+      { name: "Horas Internas", value: totalHorasInternas, color: "#3b82f6" },
+      { name: "Horas Externas", value: totalHorasExternas, color: "#10b981" },
+    ],
+    proyectos_por_carrera: [
+      { departamento: "Arquitectura", proyectos: 15, estudiantes: 180 },
+      { departamento: "Ing. Civil", proyectos: 12, estudiantes: 160 },
+      { departamento: "Ing. Industrial", proyectos: 22, estudiantes: 290 },
+      { departamento: "Ing. Informática", proyectos: 25, estudiantes: 310 },
+      { departamento: "Ing. Eléctrica", proyectos: 8, estudiantes: 85 },
+      { departamento: "Ing. Mecánica", proyectos: 10, estudiantes: 115 },
+      { departamento: "Ing. Química", proyectos: 7, estudiantes: 90 },
+      { departamento: "Ing. de Alimentos", proyectos: 5, estudiantes: 55 },
+      { departamento: "Ing. Energética", proyectos: 4, estudiantes: 40 },
     ],
     proyectos_por_departamento: [
-      { departamento: "Ing. Civil", proyectos: 12, estudiantes: 180 },
-      { departamento: "Ing. Industrial", proyectos: 8, estudiantes: 145 },
-      { departamento: "Ing. Sistemas", proyectos: 15, estudiantes: 220 },
-      { departamento: "Arquitectura", proyectos: 10, estudiantes: 160 },
+      { departamento: "Ahuachapán", proyectos: 5, estudiantes: 45 },
+      { departamento: "Santa Ana", proyectos: 18, estudiantes: 150 },
+      { departamento: "Sonsonate", proyectos: 12, estudiantes: 90 },
+      { departamento: "Chalatenango", proyectos: 8, estudiantes: 60 },
+      { departamento: "La Libertad", proyectos: 25, estudiantes: 210 },
+      { departamento: "San Salvador", proyectos: 40, estudiantes: 350 },
+      { departamento: "Cuscatlán", proyectos: 6, estudiantes: 40 },
+      { departamento: "La Paz", proyectos: 9, estudiantes: 75 },
+      { departamento: "Cabañas", proyectos: 4, estudiantes: 30 },
+      { departamento: "San Vicente", proyectos: 7, estudiantes: 55 },
+      { departamento: "Usulután", proyectos: 10, estudiantes: 85 },
+      { departamento: "San Miguel", proyectos: 20, estudiantes: 180 },
+      { departamento: "Morazán", proyectos: 5, estudiantes: 35 },
+      { departamento: "La Unión", proyectos: 8, estudiantes: 65 },
     ],
     impacto_reciente: [
       { mes: "Ene", beneficiarios: 1200 },
@@ -263,6 +316,32 @@ export default function DashboardPage() {
 
       {/* Proyectos por departamento e impacto social */}
       <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Proyectos por Carrera</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {dashboardData.proyectos_por_carrera.map((dept, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{dept.departamento}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {dept.estudiantes} estudiantes
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      {dept.proyectos} proyectos
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+
         <Card>
           <CardHeader>
             <CardTitle>Proyectos por Departamento</CardTitle>
