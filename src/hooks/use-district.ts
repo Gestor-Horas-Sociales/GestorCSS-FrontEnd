@@ -14,7 +14,7 @@ export const useDistrict = () => {
     setLoadingDepartaments(true);
     try {
       const response = await getDistrictByIdDepartament(id);
-      setDepartamentsDistrict(response);
+      setDepartamentsDistrict(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error("Error fetching departaments:", error);
     } finally {

@@ -1,5 +1,4 @@
 import type { District } from "@/Types/DistrictType";
-import type { Departament } from "@/Types/DepartamentType";
 import { api } from "./axios";
 
 // Obtener todos los distritos
@@ -10,6 +9,6 @@ export const getDistricts = async () => {
 
 // Obtener un distrito por ID Departamento
 export const getDistrictByIdDepartament = async (id: number) => {
-    const response = await api.get<Departament[]>(`/districts/department/${id}`);
-    return response.data as Departament[];
-}
+  const response = await api.get<{ data: District[] }>(`/districts/department/${id}`);
+  return response.data.data;
+};

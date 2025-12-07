@@ -291,7 +291,7 @@ export default function Institutions() {
                         nameField="district_id"
                         label="Distrito"
                         placeholder="Seleccione distrito"
-                        listRender={departamentsDistrict.map((district) => ({
+                        listRender={(departamentsDistrict ?? []).map((district) => ({
                           key: district.id.toString(),
                           textRender: district.name,
                         }))}
