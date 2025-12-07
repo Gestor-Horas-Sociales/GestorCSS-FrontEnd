@@ -1,10 +1,16 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Download, Users, BarChart3, MapPin, Award } from "lucide-react"
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Download, Users, BarChart3, MapPin, Award } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -16,45 +22,129 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
-} from "recharts"
+  Legend,
+} from "recharts";
+import { useCarrera } from "@/hooks/use-carrera";
+import { useDepartament } from "@/hooks/use-departament";
+import { useEstudiantes } from "@/hooks/use-estudiantes";
+import { useHoursRecord } from "@/hooks/use-hours";
+import { useProjects } from "@/hooks/use-projects";
 
-// Datos para reportes
-const reportData = {
-  resumen_general: {
-    total_estudiantes: 1250,
-    estudiantes_activos: 980,
-    horas_completadas: 125000,
-    proyectos_activos: 45,
-    beneficiarios_impactados: 12500,
-  },
-  por_carrera: [
-    { carrera: "Ing. Sistemas", estudiantes: 320, horas: 38400, completados: 245 },
-    { carrera: "Ing. Civil", estudiantes: 280, horas: 33600, completados: 210 },
-    { carrera: "Ing. Industrial", estudiantes: 250, horas: 30000, completados: 180 },
-    { carrera: "Arquitectura", estudiantes: 400, horas: 48000, completados: 295 },
-  ],
-  por_año: [
-    { año: "1°", total: 280, completados: 45, porcentaje: 16 },
-    { año: "2°", total: 260, completados: 120, porcentaje: 46 },
-    { año: "3°", total: 240, completados: 180, porcentaje: 75 },
-    { año: "4°", total: 220, completados: 200, porcentaje: 91 },
-    { año: "5°", total: 250, completados: 235, porcentaje: 94 },
-  ],
-  impacto_social: [
-    { tipo: "Educación", proyectos: 18, beneficiarios: 4500, color: "#3b82f6" },
-    { tipo: "Salud", proyectos: 12, beneficiarios: 3200, color: "#10b981" },
-    { tipo: "Infraestructura", proyectos: 8, beneficiarios: 2800, color: "#f59e0b" },
-    { tipo: "Medio Ambiente", proyectos: 7, beneficiarios: 2000, color: "#8b5cf6" },
-  ],
-}
+// Paleta de colores para las gráficas
+const COLORS = [
+  "#3b82f6", // Blue
+  "#10b981", // Green
+  "#f59e0b", // Orange
+  "#8b5cf6", // Purple
+  "#ef4444", // Red
+  "#06b6d4", // Cyan
+  "#ec4899", // Pink
+];
 
 export default function ReportsPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState("2024")
+  const [selectedPeriod, setSelectedPeriod] = useState("2024");
+
+  // --- 1. HOOKS Y DATOS ---
+  const { estudiantes } = useEstudiantes();
+  const { projects } = useProjects();
+  const { hours } = useHoursRecord();
+  const { carreras } = useCarrera();
+  const { departaments } = useDepartament();
+
+  // --- 2. CÁLCULOS DINÁMICOS ---
+
+  // A. Métricas Generales
+  const totalBeneficiarios =
+    projects?.reduce(
+      (acc, p) => acc + (Number(p.number_beneficiaries) || 0),
+      0
+    ) || 0;
+
+  const totalHorasCompletadas =
+    hours?.reduce((acc, h) => acc + (Number(h.hours) || 0), 0) || 0;
+
+  // B. Datos para Gráfico de Barras (Progreso por Año)
+  const dataPorAno = [1, 2, 3, 4, 5].map((year) => ({
+    año: `${year}° Año`, // Etiqueta XAxis
+    total: estudiantes?.filter((e) => e.career_year === year).length || 0, // Barra Gris
+    completados:
+      estudiantes?.filter(
+        (e) =>
+          e.career_year === year &&
+          (Number(e.external_hours) || 0) + (Number(e.internal_hours) || 0) >=
+            600
+      ).length || 0, // Barra Verde
+  }));
+
+  // C. Datos para Gráfico de Pastel (Proyectos por Departamento Geográfico)
+  const dataPorDepto =
+    departaments
+      ?.map((depto, index) => {
+        const count =
+          projects?.filter((p) => p.id === depto.id).length || 0;
+        return {
+          name: depto.name, // Etiqueta
+          value: count, // Valor para el slice
+          color: COLORS[index % COLORS.length], // Color cíclico
+        };
+      })
+      .filter((d) => d.value > 0) || []; // Filtramos los que tienen 0 para que no se vea feo el pie
+
+  // D. Datos para la Lista Detallada (Por Carrera)
+  const dataPorCarrera =
+    carreras?.map((carrera) => {
+      // Filtrar estudiantes de esta carrera
+      const studentsInCareer =
+        estudiantes?.filter((e) => e.id === carrera.id) || [];
+
+      // Calcular horas totales sumadas de esos estudiantes (aproximado)
+      // Nota: Esto es costoso computacionalmente, si es lento, simplifícalo.
+      const totalHoursInCareer = studentsInCareer.reduce(
+        (acc, s) =>
+          acc +
+          ((Number(s.external_hours) || 0) + (Number(s.internal_hours) || 0)),
+        0
+      );
+
+      // Calcular completados (>600h)
+      const completedInCareer = studentsInCareer.filter(
+        (s) =>
+          (Number(s.external_hours) || 0) + (Number(s.internal_hours) || 0) >=
+          600
+      ).length;
+
+      return {
+        carrera: carrera.name,
+        estudiantes: studentsInCareer.length,
+        horas: totalHoursInCareer,
+        completados: completedInCareer,
+        porcentaje:
+          studentsInCareer.length > 0
+            ? Math.round((completedInCareer / studentsInCareer.length) * 100)
+            : 0,
+      };
+    }) || [];
+
+  // --- 3. OBJETO UNIFICADO PARA RENDER ---
+  const reportData = {
+    resumen_general: {
+      total_estudiantes: estudiantes?.length || 0,
+      estudiantes_activos:
+        estudiantes?.filter((s) => s.active === true).length || 0,
+      horas_completadas: totalHorasCompletadas,
+      proyectos_activos: projects?.filter((p) => p.active === true).length || 0,
+      beneficiarios_impactados: totalBeneficiarios,
+    },
+    // Asignamos las variables calculadas arriba
+    por_año: dataPorAno,
+    impacto_social: dataPorDepto, // Usamos deptos geográficos para el Pie Chart
+    por_carrera: dataPorCarrera,
+  };
 
   const generateReport = (type: string) => {
-    console.log(`Generando reporte: ${type}`)
-    // Aquí iría la lógica para generar el reporte
-  }
+    console.log(`Generando reporte: ${type}`);
+    // Aquí iría la lógica para generar el PDF/Excel
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -62,7 +152,9 @@ export default function ReportsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Reportes y Análisis</h1>
-          <p className="text-muted-foreground">Generación de reportes detallados y análisis de impacto social</p>
+          <p className="text-muted-foreground">
+            Generación de reportes detallados y análisis en tiempo real
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
@@ -111,11 +203,13 @@ export default function ReportsPage() {
               <div className="text-2xl font-bold text-purple-600">
                 {reportData.resumen_general.horas_completadas.toLocaleString()}
               </div>
-              <div className="text-sm text-purple-800">Horas Completadas</div>
+              <div className="text-sm text-purple-800">Horas Registradas</div>
             </div>
 
             <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">{reportData.resumen_general.proyectos_activos}</div>
+              <div className="text-2xl font-bold text-orange-600">
+                {reportData.resumen_general.proyectos_activos}
+              </div>
               <div className="text-sm text-orange-800">Proyectos Activos</div>
             </div>
 
@@ -131,29 +225,56 @@ export default function ReportsPage() {
 
       {/* Gráficos de Análisis */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Progreso por Año */}
+        {/* Progreso por Año (Bar Chart) */}
         <Card>
           <CardHeader>
-            <CardTitle>Progreso por Año Académico</CardTitle>
+            <CardTitle>Estudiantes vs Completados por Año</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={reportData.por_año}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="año" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="total" fill="#e5e7eb" name="Total Estudiantes" />
-                <Bar dataKey="completados" fill="#10b981" name="Completados" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="año"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  cursor={{ fill: "transparent" }}
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "none",
+                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                  }}
+                />
+                <Legend />
+                <Bar
+                  dataKey="total"
+                  fill="#e2e8f0"
+                  name="Total Inscritos"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="completados"
+                  fill="#10b981"
+                  name="Horas Completas (>600h)"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Impacto Social */}
+        {/* Distribución Geográfica (Pie Chart) */}
         <Card>
           <CardHeader>
-            <CardTitle>Impacto Social por Área</CardTitle>
+            <CardTitle>Distribución de Proyectos por Departamento</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -162,17 +283,21 @@ export default function ReportsPage() {
                   data={reportData.impacto_social}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ tipo, beneficiarios }) => `${tipo}: ${beneficiarios}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="beneficiarios"
+                  innerRadius={60} // Hace que sea una "Donut chart" (más moderno)
+                  outerRadius={90}
+                  paddingAngle={2}
+                  dataKey="value"
                 >
                   {reportData.impacto_social.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip />
+                <Legend
+                  layout="vertical"
+                  verticalAlign="middle"
+                  align="right"
+                />
               </RechartsPieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -182,30 +307,41 @@ export default function ReportsPage() {
       {/* Reportes por Carrera */}
       <Card>
         <CardHeader>
-          <CardTitle>Análisis por Carrera</CardTitle>
+          <CardTitle>Desglose Detallado por Carrera</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
             {reportData.por_carrera.map((carrera, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+              <div
+                key={index}
+                className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors"
+              >
                 <div className="flex-1">
-                  <h3 className="font-semibold">{carrera.carrera}</h3>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                    <span>{carrera.estudiantes} estudiantes</span>
-                    <span>{carrera.horas.toLocaleString()} horas</span>
-                    <span>{carrera.completados} completados</span>
+                  <h3 className="font-semibold text-base">{carrera.carrera}</h3>
+                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3" /> {carrera.estudiantes}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Award className="w-3 h-3" /> {carrera.completados}{" "}
+                      completados
+                    </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold">
-                    {Math.round((carrera.completados / carrera.estudiantes) * 100)}%
+
+                <div className="flex items-center gap-6">
+                  <div className="text-right min-w-[80px]">
+                    <div className="text-lg font-bold text-slate-700">
+                      {carrera.porcentaje}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Progreso Total
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">Completado</div>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Download className="w-4 h-4 text-slate-500" />
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm" className="ml-4 bg-transparent">
-                  <Download className="w-4 h-4 mr-1" />
-                  Reporte
-                </Button>
               </div>
             ))}
           </div>
@@ -215,69 +351,101 @@ export default function ReportsPage() {
       {/* Tipos de Reportes Disponibles */}
       <Card>
         <CardHeader>
-          <CardTitle>Reportes Disponibles</CardTitle>
+          <CardTitle>Generador de Reportes</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+            <div className="p-4 border rounded-lg hover:shadow-md transition-shadow bg-white">
               <div className="flex items-center gap-3 mb-3">
-                <Users className="w-8 h-8 text-blue-600" />
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="w-6 h-6 text-blue-600" />
+                </div>
                 <div>
-                  <h3 className="font-semibold">Reporte Individual</h3>
-                  <p className="text-sm text-muted-foreground">Por estudiante</p>
+                  <h3 className="font-semibold">Individual</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Historial por alumno
+                  </p>
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar estudiante" />
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Seleccionar alumno..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">María González</SelectItem>
-                    <SelectItem value="2">Carlos Martínez</SelectItem>
+                    {/* Llenamos el select con datos reales (limitado a 5 para no saturar) */}
+                    {estudiantes?.slice(0, 5).map((est) => (
+                      <SelectItem key={est.id} value={String(est.id)}>
+                        {est.name} {est.lastname}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                <Button className="w-full" onClick={() => generateReport("individual")}>
-                  Generar Reporte
+                <Button
+                  className="w-full h-9"
+                  variant="outline"
+                  onClick={() => generateReport("individual")}
+                >
+                  Descargar PDF
                 </Button>
               </div>
             </div>
 
-            <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+            <div className="p-4 border rounded-lg hover:shadow-md transition-shadow bg-white">
               <div className="flex items-center gap-3 mb-3">
-                <MapPin className="w-8 h-8 text-green-600" />
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <MapPin className="w-6 h-6 text-green-600" />
+                </div>
                 <div>
-                  <h3 className="font-semibold">Reporte por Proyecto</h3>
-                  <p className="text-sm text-muted-foreground">Impacto y participación</p>
+                  <h3 className="font-semibold">Por Proyecto</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Impacto y métricas
+                  </p>
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar proyecto" />
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Seleccionar proyecto..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Apoyo Educativo El Manguito</SelectItem>
-                    <SelectItem value="2">Construcción Comunitaria</SelectItem>
+                    {projects?.slice(0, 5).map((proj) => (
+                      <SelectItem key={proj.id} value={String(proj.id)}>
+                        {proj.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                <Button className="w-full" onClick={() => generateReport("proyecto")}>
-                  Generar Reporte
+                <Button
+                  className="w-full h-9"
+                  variant="outline"
+                  onClick={() => generateReport("proyecto")}
+                >
+                  Descargar PDF
                 </Button>
               </div>
             </div>
 
-            <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+            <div className="p-4 border rounded-lg hover:shadow-md transition-shadow bg-white">
               <div className="flex items-center gap-3 mb-3">
-                <Award className="w-8 h-8 text-purple-600" />
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Award className="w-6 h-6 text-purple-600" />
+                </div>
                 <div>
                   <h3 className="font-semibold">Memoria Anual</h3>
-                  <p className="text-sm text-muted-foreground">Reporte completo</p>
+                  <p className="text-xs text-muted-foreground">
+                    Reporte institucional
+                  </p>
                 </div>
               </div>
-              <div className="space-y-2">
-                <div className="text-sm text-muted-foreground">Incluye todos los datos del año académico</div>
-                <Button className="w-full" onClick={() => generateReport("anual")}>
+              <div className="space-y-3">
+                <div className="text-xs text-muted-foreground flex items-center h-9">
+                  Incluye todas las carreras y deptos.
+                </div>
+                <Button
+                  className="w-full h-9 bg-purple-600 hover:bg-purple-700"
+                  onClick={() => generateReport("anual")}
+                >
                   Generar Memoria
                 </Button>
               </div>
@@ -286,5 +454,5 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

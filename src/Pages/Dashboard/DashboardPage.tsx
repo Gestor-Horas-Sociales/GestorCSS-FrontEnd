@@ -85,7 +85,6 @@ export default function DashboardPage() {
     const proyectosEnDepto = projects?.filter(p => p.departament_id === depto.id) || [];
     
     // 2. Sumamos estudiantes asignados a esos proyectos (Si tienes ese dato en el proyecto)
-    // Nota: Asumo que 'assigned_student_count' existe en el proyecto, si no, pon 0 o calcula diferente
     const estudiantesEnDepto = proyectosEnDepto.reduce((acc, p) => acc + (Number(p.maximum_students) || 0), 0);
 
     return {
