@@ -16,11 +16,11 @@ export interface InstitutionType {
 
 export type InstitutionPayload = {
   name: string;
-  email: string;
-  district_id: number;
   address?: string;
+  email?: string;
   phone?: string;
   message?: string;
+  district_id?: number;
 };
 
 export const InstitutionSchema = z.object({
