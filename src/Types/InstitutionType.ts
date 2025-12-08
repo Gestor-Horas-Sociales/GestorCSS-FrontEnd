@@ -27,11 +27,8 @@ export const InstitutionSchema = z.object({
   id: z.number().optional(),
   name: z.string().nonempty({ message: "Nombre es requerido" }),
   address: z.string().optional(),
-  email: z
-    .string()
-    .nonempty({ message: "Correo es requerido" })
-    .email({ message: "Correo inválido" }),
+  email: z.string().optional(),
   phone: z.string().optional(),
-  departament_id: z.number({ message: "Departamento es requerido" }),
-  district_id: z.number({ message: "Distrito es requerido" }),
+  departament_id: z.number().optional(),
+  district_id: z.number().optional(),
 });
