@@ -8,12 +8,14 @@ export const getInstitutions = async () => {
 };
 
 // Obtener una institución por ID
-export const getInstitutionById = (id: string) =>
+// CAMBIO: id ahora es number para ser consistente con el resto
+export const getInstitutionById = (id: number) =>
   api.get<InstitutionType>(`/institutions/${id}`);
 
 // Crear una nueva institución
-export const createInstitution = (data: Omit<InstitutionPayload, "id">) =>
-  api.post<InstitutionPayload>("/institutions", data);
+// NOTA: Typescript validará 'InstitutionPayload'. Asegúrate que email/district sean opcionales ahí.
+export const createInstitution = (data: InstitutionPayload) =>
+  api.post("/institutions", data);
 
 // Actualizar una institución existente
 export const updateInstitution = (id: number, data: Partial<InstitutionType>) =>

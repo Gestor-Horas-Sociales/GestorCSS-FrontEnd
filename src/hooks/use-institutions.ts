@@ -36,33 +36,32 @@ export const useInstitutions = () => {
   const insertInstitution = async (data: z.infer<typeof InstitutionSchema>) => {
     setLoading(true);
     try {
+      // Preparamos el payload limpiando strings vacíos si es necesario
+      // Si data.email es "", lo convertimos a null o undefined para que la BD no se queje si es Unique
+      const payload = {
+        name: data.name,
+        // Si es string vacío o null/undefined, mandamos null
+        email: data.email ? data.email : null,
+        district_id: data.district_id ?? null,
+        address: data.address || null, // Preferir null sobre ""
+        phone: data.phone || null,     // Preferir null sobre ""
+      };
+
       if (activeEdit) {
-        const response = await updateInstitution(Number(data.id), {
-          name: data.name,
-          email: data.email,
-          district_id: data.district_id,
-          address: data.address,
-          phone: data.phone,
-        });
+        // En update, data.id debe existir
+        const response = await updateInstitution(Number(data.id), payload);
         setActiveEdit(false);
         setOpen(false);
         toast.success(response.data.message);
       } else {
-        const response = await createInstitution({
-          name: data.name,
-          email: data.email,
-          district_id: data.district_id,
-          address: data.address ? data.address : "",
-          phone: data.phone ? data.phone : "",
-        });
-
+        const response = await createInstitution(payload);
         toast.success(response.data.message);
         setOpen(false);
       }
     } catch (error: unknown) {
-      console.error("Error al crear la institución:", error);
+      console.error("Error al guardar la institución:", error);
       const err = error as AxiosError<{ message?: string }>;
-      const message = err.response?.data?.message;
+      const message = err.response?.data?.message || "Error desconocido";
       toast.error(message);
     } finally {
       setLoading(false);

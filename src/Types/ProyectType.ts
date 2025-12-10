@@ -1,9 +1,10 @@
-import { z } from "zod"
-import type { CareerType } from "./CareerType"
-import type { DepartamentoType } from "./DepartamentoType"
-import type { District } from "./DistrictType"
+import { z } from "zod";
+import type { CareerType } from "./CareerType";
+import type { DepartamentoType } from "./DepartamentoType";
+import type { District } from "./DistrictType";
+import type { InstitutionType } from "./InstitutionType"; // <--- IMPORTANTE: Necesitas importar esto
 
-// Zod Schema para validación de formularios o inputs de la API
+// Zod Schema (Para el Formulario)
 export const ProjectSchema = z.object({
   id: z.number().optional(),
 
@@ -17,52 +18,58 @@ export const ProjectSchema = z.object({
   req_min_year: z.number().int().min(1, { message: "Años mínimos requeridos debe ser al menos 1" }),
 
   req_gender: z.string().min(1, { message: "Género requerido" }),
-  // Usamos z.coerce.string() para que Zod convierta automáticamente a string si recibe un número
   req_career: z.coerce.string().min(1, { message: "Carrera requerida es requerida" }),
 
   number_beneficiaries: z.number().int().min(1, { message: "Número de beneficiarios debe ser al menos 1" }),
 
-  departament_id: z.number().int().optional(), // Opcional para el frontend, no se envía al backend
+  departament_id: z.number().int().optional(),
   district_id: z.number().int().min(1, { message: "Distrito es requerido" }),
 
-  // Date fields as strings (ISO format expected)
   start_date: z.string().min(1, { message: "Fecha de inicio es requerida" }),
   end_date: z.string().min(1, { message: "Fecha de fin es requerida" }),
 
   active: z.boolean(),
 
-  institution_id: z.number().int().min(1, { message: "Institución es requerida" }),
-  message: z.string().optional(), // Opcional para el frontend, no se envía al backend
-})
+  // CORRECCIÓN 1: El nombre debe coincidir con el del formulario (institution_ids)
+  // Es un array de números (IDs) para enviar al backend
+  institution_ids: z.array(z.number()).min(1, { message: "Selecciona al menos una institución" }),
+  
+  message: z.string().optional(),
+});
 
-// Type inference from Zod schema
-export type ProjectSchemaType = z.infer<typeof ProjectSchema>
+export type ProjectSchemaType = z.infer<typeof ProjectSchema>;
 
-// Interface for internal use in frontend or backend
+// Interface (Para la Tabla y lectura de API)
 export interface ProjectType {
-  id?: number
-  name: string
-  description: string
-  social_impact?: string
+  id?: number;
+  name: string;
+  description: string;
+  social_impact?: string;
 
-  type_hours_id: number
-  req_hours: number
-  maximum_students: number
-  req_min_year: number
+  type_hours_id: number;
+  req_hours: number;
+  maximum_students: number;
+  req_min_year: number;
 
-  req_gender: string
-  // Puede ser string (ID) o CareerType (objeto completo)
-  req_career: string | CareerType
+  req_gender: string;
+  req_career: string | CareerType;
 
-  number_beneficiaries: number
+  number_beneficiaries: number;
 
-  departament_id?: number | DepartamentoType
-  district_id: number | District
+  departament_id?: number | DepartamentoType;
+  district_id: number | District;
 
-  start_date: string
-  end_date: string
+  start_date: string;
+  end_date: string;
 
-  active: boolean
-  institution_id: number
-  message?: string
+  active: boolean;
+
+  // CORRECCIÓN 2: Eliminamos 'institution_id' singular.
+  // Agregamos el array de objetos (para mostrar nombres en la tabla)
+  institutions?: InstitutionType[]; 
+  
+  // Opcional: Agregamos el array de IDs por si el backend lo devuelve plano
+  institution_ids?: number[]; 
+
+  message?: string;
 }
