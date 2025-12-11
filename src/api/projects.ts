@@ -1,23 +1,27 @@
-import { api } from "./axios"
-import type { ProjectType } from "@/Types/ProyectType"
+import { api } from "./axios";
+import type { ProjectType, ProjectSchemaType } from "@/Types/ProyectType";
 
+// Obtener todos: Retorna la estructura completa (lectura)
 export const getProjects = async () => {
-  const response = await api.get("/projects")
-  return response.data.data as ProjectType[]
-}
+  const response = await api.get("/projects");
+  return response.data.data as ProjectType[];
+};
 
-export const getProjectById = async (id: string) => {
-  const response = await api.get<{ data: ProjectType }>(`/projects/${id}`)
-  return response.data.data
-}
+// Obtener por ID: Recibe number, retorna estructura completa
+export const getProjectById = async (id: number) => {
+  const response = await api.get<{ data: ProjectType }>(`/projects/${id}`);
+  return response.data.data;
+};
 
-export const createProject = (data: Omit<ProjectType, "id">) =>
-  api.post<{ data: ProjectType; message: string }>("/projects", data)
+// Crear: Usa el Schema del formulario (asegura que institution_ids vaya incluido)
+export const createProject = (data: ProjectSchemaType) =>
+  api.post<{ data: ProjectType; message: string }>("/projects", data);
 
-export const updateProject = (id: string, data: Partial<Omit<ProjectType, "id">>) => {
-  // Asegúrate de no enviar el ID en la actualización, ya que está en la URL
-  // y el backend podría no esperarlo en el cuerpo.
-  return api.patch<{ data: ProjectType; message: string }>(`/projects/${id}`, data)
-}
+// Actualizar: Recibe ID number y parcial del Schema
+export const updateProject = (id: number, data: Partial<ProjectSchemaType>) => {
+  return api.patch<{ data: ProjectType; message: string }>(`/projects/${id}`, data);
+};
 
-export const deleteProject = (id: string) => api.delete<{ message: string }>(`/projects/${id}`)
+// Eliminar: Recibe number
+export const deleteProject = (id: number) => 
+  api.delete<{ message: string }>(`/projects/${id}`);

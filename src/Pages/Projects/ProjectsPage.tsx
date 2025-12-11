@@ -42,7 +42,7 @@ import FormSelectField from "@/components/FormSelectField";
 import { useDepartament } from "@/hooks/use-departament";
 import type { ColumnDef } from "@tanstack/react-table";
 import GeneralAlert from "@/components/GeneralAlert";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import TableStructure from "@/components/TableStructure";
 import { useTable } from "@/hooks/useTable";
 import { useCarrera } from "@/hooks/use-carrera";
@@ -50,7 +50,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useInstitutions } from "@/hooks/use-institutions";
 
-// --- IMPORTS NUEVOS PARA EL SELECT MANUAL ---
+// Imports para el Select Manual
 import {
   Select,
   SelectContent,
@@ -105,12 +105,10 @@ export default function ProjectsPage() {
       start_date: new Date().toISOString().split("T")[0],
       end_date: new Date().toISOString().split("T")[0],
       active: true,
-      // Iniciamos con un array con un 0 para mostrar al menos un select vacío
-      institution_ids: [0],
+      institution_ids: [0], // Inicializamos con 0 para mostrar un select vacío
     },
   });
 
-  // Observamos el array de IDs para renderizar la lista
   const selectedInstitutionIds = form.watch("institution_ids");
 
   useEffect(() => {
@@ -126,7 +124,7 @@ export default function ProjectsPage() {
     return () => subscription.unsubscribe();
   }, [form]);
 
-  // FUNCIONES PARA MANEJAR LA LISTA DINÁMICA
+  // --- LÓGICA DE LISTA DINÁMICA ---
   const addInstitutionSlot = () => {
     const current = form.getValues("institution_ids");
     form.setValue("institution_ids", [...current, 0]);
@@ -134,6 +132,11 @@ export default function ProjectsPage() {
 
   const removeInstitutionSlot = (index: number) => {
     const current = form.getValues("institution_ids");
+    // Evitar dejar el array vacío, si borran el último dejamos uno vacío [0]
+    if (current.length === 1) {
+      form.setValue("institution_ids", [0]);
+      return;
+    }
     const newArray = current.filter((_, i) => i !== index);
     form.setValue("institution_ids", newArray);
   };
@@ -143,6 +146,24 @@ export default function ProjectsPage() {
     const newArray = [...current];
     newArray[index] = Number(newValue);
     form.setValue("institution_ids", newArray);
+  };
+
+  // --- MANEJO DEL SUBMIT (Limpieza de datos) ---
+  const handleFormSubmit = (data: z.infer<typeof ProjectSchema>) => {
+    // 1. Filtramos los ceros (selects no seleccionados)
+    const validInstitutionIds = data.institution_ids.filter((id) => id !== 0);
+
+    // 2. Validamos que quede al menos uno
+    if (validInstitutionIds.length === 0) {
+      toast.error("Debe seleccionar al menos una institución válida.");
+      return;
+    }
+
+    // 3. Enviamos los datos limpios
+    insertProject({
+      ...data,
+      institution_ids: validInstitutionIds,
+    });
   };
 
   const openDialogDelete = useCallback((id: number) => {
@@ -194,7 +215,7 @@ export default function ProjectsPage() {
         const currentInstitutionIds =
           projectDetails.institutions && projectDetails.institutions.length > 0
             ? projectDetails.institutions.map((i) => i.id)
-            : [0]; // Si no tiene, ponemos [0] para que salga un select vacío
+            : [0];
 
         setIdDepartment(departmentId);
 
@@ -220,8 +241,6 @@ export default function ProjectsPage() {
               ? new Date(projectDetails.end_date).toISOString().split("T")[0]
               : "",
             active: projectDetails.active ?? true,
-
-            // ASIGNAMOS EL ARRAY RECUPERADO
             institution_ids: currentInstitutionIds,
           });
         }, 100);
@@ -312,8 +331,6 @@ export default function ProjectsPage() {
             </div>
           );
         }
-
-        // Fallback básico
         return (
           <div className="text-xs text-muted-foreground">
             ID:{" "}
@@ -397,7 +414,6 @@ export default function ProjectsPage() {
     <>
       {(loading || loadingProject) && <Spinner />}
       <div className="p-6 space-y-6">
-        {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Gestión de Proyectos</h1>
@@ -432,7 +448,7 @@ export default function ProjectsPage() {
                     start_date: new Date().toISOString().split("T")[0],
                     end_date: new Date().toISOString().split("T")[0],
                     active: true,
-                    institution_ids: [0], // Resetear con uno vacío
+                    institution_ids: [0],
                   });
                 }
               }}
@@ -447,8 +463,9 @@ export default function ProjectsPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
+                  {/* AQUÍ EL CAMBIO CLAVE: Usamos handleFormSubmit en lugar de pasarlo directo */}
                   <form
-                    onSubmit={form.handleSubmit(insertProject, (e) =>
+                    onSubmit={form.handleSubmit(handleFormSubmit, (e) =>
                       console.log(e)
                     )}
                   >
@@ -486,7 +503,10 @@ export default function ProjectsPage() {
                                 >
                                   <div className="flex-1">
                                     <Select
-                                      value={instId.toString()}
+                                      // Fix: Si es 0 (vacío), pasamos string vacío para que salga el placeholder
+                                      value={
+                                        instId === 0 ? "" : instId.toString()
+                                      }
                                       onValueChange={(val) =>
                                         updateInstitutionSlot(index, val)
                                       }
@@ -512,11 +532,6 @@ export default function ProjectsPage() {
                                     size="icon"
                                     className="text-red-500 hover:text-red-700 hover:bg-red-50"
                                     onClick={() => removeInstitutionSlot(index)}
-                                    // No permitir borrar si es el único elemento (opcional)
-                                    disabled={
-                                      selectedInstitutionIds.length === 1 &&
-                                      index === 0
-                                    }
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
@@ -528,7 +543,7 @@ export default function ProjectsPage() {
                               variant="outline"
                               size="sm"
                               onClick={addInstitutionSlot}
-                              className="mt-2 text-white border-blue-200 hover:bg-blue-50"
+                              className="mt-2 text-blue-600 border-blue-200 hover:bg-blue-50"
                             >
                               <Plus className="w-4 h-4 mr-2" />
                               Agregar otra institución
@@ -582,7 +597,6 @@ export default function ProjectsPage() {
                         </div>
                       </div>
 
-                      {/* Requisitos (Igual que antes) */}
                       <div className="space-y-4">
                         <h3 className="text-lg font-semibold">Requisitos</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -603,7 +617,6 @@ export default function ProjectsPage() {
                             />
                           </div>
                         </div>
-                        {/* Reemplaza el FormSelectField de req_gender con esto: */}
                         <div>
                           <FormField
                             control={form.control}
@@ -646,7 +659,6 @@ export default function ProjectsPage() {
                         </div>
                       </div>
 
-                      {/* Ubicación (Igual que antes) */}
                       <div className="space-y-4">
                         <h3 className="text-lg font-semibold">Ubicación</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -688,7 +700,6 @@ export default function ProjectsPage() {
                         </div>
                       </div>
 
-                      {/* Configuración (Igual que antes) */}
                       <div className="space-y-4">
                         <h3 className="text-lg font-semibold">Configuración</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -806,7 +817,6 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* ... Estadísticas y Tabla ... */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader>

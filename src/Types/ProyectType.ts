@@ -2,9 +2,9 @@ import { z } from "zod";
 import type { CareerType } from "./CareerType";
 import type { DepartamentoType } from "./DepartamentoType";
 import type { District } from "./DistrictType";
-import type { InstitutionType } from "./InstitutionType"; // <--- IMPORTANTE: Necesitas importar esto
+import type { InstitutionType } from "./InstitutionType";
 
-// Zod Schema (Para el Formulario)
+// Zod Schema para validación de formularios (Envío de datos)
 export const ProjectSchema = z.object({
   id: z.number().optional(),
 
@@ -30,16 +30,16 @@ export const ProjectSchema = z.object({
 
   active: z.boolean(),
 
-  // CORRECCIÓN 1: El nombre debe coincidir con el del formulario (institution_ids)
-  // Es un array de números (IDs) para enviar al backend
+  // CORRECTO: Array de IDs para el formulario
   institution_ids: z.array(z.number()).min(1, { message: "Selecciona al menos una institución" }),
-  
+
   message: z.string().optional(),
 });
 
+// Inferencia del tipo desde Zod
 export type ProjectSchemaType = z.infer<typeof ProjectSchema>;
 
-// Interface (Para la Tabla y lectura de API)
+// Interface para uso interno en frontend (Lectura de API / Tablas)
 export interface ProjectType {
   id?: number;
   name: string;
@@ -64,12 +64,13 @@ export interface ProjectType {
 
   active: boolean;
 
-  // CORRECCIÓN 2: Eliminamos 'institution_id' singular.
-  // Agregamos el array de objetos (para mostrar nombres en la tabla)
-  institutions?: InstitutionType[]; 
-  
-  // Opcional: Agregamos el array de IDs por si el backend lo devuelve plano
-  institution_ids?: number[]; 
+  // CAMBIO: Se eliminó 'institution_id' singular que sobraba.
+
+  // Array de objetos (para mostrar nombres en la tabla)
+  institutions?: InstitutionType[];
+
+  // Array de IDs (para rellenar el formulario al editar)
+  institution_ids?: number[];
 
   message?: string;
 }
