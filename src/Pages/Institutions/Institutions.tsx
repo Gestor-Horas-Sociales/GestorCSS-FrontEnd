@@ -115,13 +115,6 @@ export default function Institutions() {
       },
     },
     {
-      accessorKey: "email",
-      header: "Email",
-      meta: {
-        label: "Email",
-      },
-    },
-    {
       accessorKey: "district.name",
       header: "Distrito",
       meta: {
@@ -266,7 +259,7 @@ export default function Institutions() {
                       <FormTextField
                         formField={form}
                         nameField="email"
-                        label="Correo electrónico"
+                        label="Correo electrónico (opcional)"
                         placeholder="Ingrese correo electrónico"
                       />
                     </div>
@@ -276,7 +269,7 @@ export default function Institutions() {
                       <FormSelectField
                         formField={form}
                         nameField="departament_id"
-                        label="Departamento"
+                        label="Departamento (opcional)"
                         placeholder="Seleccione departamento"
                         listRender={departaments.map((departament) => ({
                           key: departament.id.toString(),
@@ -289,7 +282,7 @@ export default function Institutions() {
                         formField={form}
                         disabled={idDepartament === 0}
                         nameField="district_id"
-                        label="Distrito"
+                        label="Distrito (opcional)"
                         placeholder="Seleccione distrito"
                         listRender={(departamentsDistrict ?? []).map((district) => ({
                           key: district.id.toString(),
