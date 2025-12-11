@@ -41,10 +41,10 @@ export const useInstitutions = () => {
       const payload = {
         name: data.name,
         // Si es string vacío o null/undefined, mandamos null
-        email: data.email ? data.email : null,
+        email: data.email || "", 
         district_id: data.district_id ?? null,
-        address: data.address || null, // Preferir null sobre ""
-        phone: data.phone || null,     // Preferir null sobre ""
+        address: data.address || undefined, // Preferir undefined sobre null
+        phone: data.phone || undefined,     // Preferir undefined sobre null
       };
 
       if (activeEdit) {

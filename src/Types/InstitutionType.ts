@@ -22,7 +22,6 @@ export type InstitutionPayload = {
   address?: string;
   phone?: string;
   message?: string;
-  district_id?: number;
 };
 
 export const InstitutionSchema = z.object({
