@@ -34,17 +34,18 @@ export const useInstitutions = () => {
   };
 
   const insertInstitution = async (data: z.infer<typeof InstitutionSchema>) => {
+
     setLoading(true);
     try {
       // Preparamos el payload limpiando strings vacíos si es necesario
       // Si data.email es "", lo convertimos a null o undefined para que la BD no se queje si es Unique
       const payload = {
+        id: data.id,
         name: data.name,
-        // Si es string vacío o null/undefined, mandamos null
-        email: data.email || "", 
-        district_id: data.district_id ?? null,
-        address: data.address || undefined, // Preferir undefined sobre null
-        phone: data.phone || undefined,     // Preferir undefined sobre null
+        email: data.email || "",
+        address: data.address || undefined,
+        phone: data.phone || undefined,
+        ...(data.district_id ? { district_id: data.district_id } : {}),
       };
 
       if (activeEdit) {

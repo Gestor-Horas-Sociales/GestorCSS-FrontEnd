@@ -12,27 +12,25 @@ export interface InstitutionType {
   createdAt?: string;
   updatedAt?: string;
   district_id?: number | null;
-  district?: District;
+  district?: District | null;
 }
 
 export type InstitutionPayload = {
+  id: number;
   name: string;
   email: string;
-  district_id: number;
+  district_id?: number;
   address?: string;
   phone?: string;
   message?: string;
 };
 
 export const InstitutionSchema = z.object({
-  id: z.number().optional(),
+  id: z.number({ message: "ID es requerido" }),
   name: z.string().nonempty({ message: "Nombre es requerido" }),
   address: z.string().optional(),
-  email: z
-    .string()
-    .nonempty({ message: "Correo es requerido" })
-    .email({ message: "Correo inválido" }),
+  email: z.string().email("Correo inválido").optional().or(z.literal("")),
   phone: z.string().optional(),
-  departament_id: z.number({ message: "Departamento es requerido" }),
-  district_id: z.number({ message: "Distrito es requerido" }),
+  departament_id: z.number().optional(),
+  district_id: z.number().optional(),
 });

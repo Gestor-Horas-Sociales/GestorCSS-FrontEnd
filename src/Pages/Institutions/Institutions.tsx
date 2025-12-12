@@ -49,6 +49,7 @@ export default function Institutions() {
   const form = useForm<z.infer<typeof InstitutionSchema>>({
     resolver: zodResolver(InstitutionSchema),
     defaultValues: {
+      id: 0,
       name: "",
       email: "",
       address: "",
@@ -78,27 +79,28 @@ export default function Institutions() {
     (
       id: number,
       name: string,
-      email: string,
+      email: string | null,
       district_id: number,
-      address: string,
-      phone: string,
+      address: string | null,
+      phone: string | null,
       departament_id: number
     ) => {
       setOpen(true);
       setActiveEdit(true);
 
       form.reset({
-        id,
-        name,
-        email,
-        district_id,
-        address,
-        phone,
-        departament_id,
+        id: id ?? 0,
+        name: name ?? "",
+        email: email ?? "",
+        district_id: district_id ?? undefined,
+        address: address ?? "",
+        phone: phone ?? "",
+        departament_id: departament_id ?? undefined,
       });
     },
     [form, setOpen, setActiveEdit]
   );
+
   const columns: ColumnDef<InstitutionType>[] = [
     {
       accessorKey: "id",
@@ -144,14 +146,17 @@ export default function Institutions() {
             variant="outline"
             className="cursor-pointer"
             onClick={() => {
+              const district_id = row.original.district?.id ?? 0;
+              const departament_id = row.original.district?.departament_id ?? 0;
+
               editInstitution(
                 row.original.id,
                 row.original.name,
-                row.original.email,
-                row.original.district.id,
-                row.original.address,
-                row.original.phone,
-                row.original.district.departament_id
+                row.original.email ?? "",
+                district_id,
+                row.original.address ?? "",
+                row.original.phone ?? "",
+                departament_id
               );
             }}
           >
@@ -202,6 +207,7 @@ export default function Institutions() {
               setOpen(true);
               setActiveEdit(false);
               form.reset({
+                id: 0,
                 name: "",
                 email: "",
                 address: "",
@@ -223,6 +229,7 @@ export default function Institutions() {
             if (!isOpen) {
               setActiveEdit(false);
               form.reset({
+                id: 0,
                 name: "",
                 email: "",
                 address: "",
@@ -246,6 +253,21 @@ export default function Institutions() {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(insertInstitution)}>
                 <div className="space-y-8">
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <div className="flex flex-col">
+                      <FormTextField
+                        formField={form}
+                        type="number"
+                        nameField="id"
+                        label="ID"
+                        placeholder="Ingrese el ID de la institución"
+                        readOnly={activeEdit}
+                        className={
+                          activeEdit ? "bg-gray-100 cursor-not-allowed" : ""
+                        }
+                      />
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                     <div className="flex flex-col">
                       <FormTextField
@@ -284,10 +306,12 @@ export default function Institutions() {
                         nameField="district_id"
                         label="Distrito (opcional)"
                         placeholder="Seleccione distrito"
-                        listRender={(departamentsDistrict ?? []).map((district) => ({
-                          key: district.id.toString(),
-                          textRender: district.name,
-                        }))}
+                        listRender={(departamentsDistrict ?? []).map(
+                          (district) => ({
+                            key: district.id.toString(),
+                            textRender: district.name,
+                          })
+                        )}
                       />
                     </div>
                   </div>
