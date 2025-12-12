@@ -637,7 +637,7 @@ export default function ProjectsPage() {
                                   <SelectContent>
                                     <SelectItem value="M">Masculino</SelectItem>
                                     <SelectItem value="F">Femenino</SelectItem>
-                                    <SelectItem value="O">Otro</SelectItem>
+                                    <SelectItem value="O">Indiferente</SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
