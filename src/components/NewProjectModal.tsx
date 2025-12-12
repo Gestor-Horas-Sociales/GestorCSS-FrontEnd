@@ -48,7 +48,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
       start_date: new Date().toISOString().split("T")[0],
       end_date: new Date().toISOString().split("T")[0],
       active: true,
-      institution_id: 1,
+      institution_ids: [1], // Ensure this is always an array
     },
   })
 
@@ -135,7 +135,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
             ? project.end_date.split("T")[0]
             : new Date(project.end_date).toISOString().split("T")[0],
         active: project.active ?? true,
-        institution_id: project.institution_id || 1,
+        institution_ids: Array.isArray(project.institution_ids) ? project.institution_ids : [project.institution_ids || 1],
       })
     }, 100)
   }
@@ -157,7 +157,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
       start_date: new Date().toISOString().split("T")[0],
       end_date: new Date().toISOString().split("T")[0],
       active: true,
-      institution_id: 1,
+      institution_ids: [1],
     })
     setIdDepartment(0)
   }
