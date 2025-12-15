@@ -1,6 +1,8 @@
 "use client"
 
-import type { ProjectType, ProjectSchema } from "../Types/ProyectType" 
+import type { ProjectType } from "../Types/ProyectType" 
+// Asegúrate de importar el ProjectSchemaType inferido o el Schema de Zod
+import { ProjectSchema } from "../Types/ProyectType" 
 import { getProjects, createProject, updateProject, deleteProject, getProjectById } from "../api/projects"
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
@@ -15,35 +17,50 @@ export const useProjects = () => {
   const [open, setOpen] = useState(false)
   const [activeEdit, setActiveEdit] = useState(false)
 
+  // Función para obtener todos los proyectos
+  const getAllProjects = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await getProjects()
+      setProjects(data)
+    } catch (error) {
+      console.error("Error al cargar proyectos:", error)
+      const err = error as AxiosError<{ message?: string }>
+      const message = err.response?.status === 500 
+        ? "Error del servidor. Verifique conexión." 
+        : err.response?.data?.message || "Error al cargar proyectos"
+      
+      toast.error(message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   const handleDeleteProject = async (id: number) => {
     setLoading(true)
     try {
-      // La API ahora espera number
       const response = await deleteProject(id)
-      toast.success(response.data.message || "Proyecto eliminado correctamente")
+      // Usamos optional chaining por si el mensaje no viene
+      toast.success(response.data?.message || "Proyecto eliminado correctamente")
+      await getAllProjects() // Recargar lista
     } catch (error) {
       console.error("Error al eliminar el proyecto:", error)
       const err = error as AxiosError<{ message?: string }>
       const message = err.response?.data?.message || "Error al eliminar el proyecto"
       toast.error(message)
-    } finally {
-      setLoading(false)
-      getAllProjects()
+      setLoading(false) // Asegurar false si falla
     }
   }
 
   const getProjectDetails = async (id: number) => {
     setLoadingProject(true)
     try {
-      // La API ahora espera number
       const project = await getProjectById(id)
       setCurrentProject(project)
       return project
     } catch (error) {
       console.error("Error al obtener detalles del proyecto:", error)
-      const err = error as AxiosError<{ message?: string }>
-      const message = err.response?.data?.message || "Error al cargar el proyecto"
-      toast.error(message)
+      toast.error("Error al cargar el proyecto")
       return null
     } finally {
       setLoadingProject(false)
@@ -53,112 +70,81 @@ export const useProjects = () => {
   const insertProject = async (data: z.infer<typeof ProjectSchema>) => {
     setLoading(true)
     try {
-      console.log("Datos recibidos en insertProject:", data)
-
-      // Construir el payload para el API
+      // Construir el payload
+      // Usamos ?.trim() || "" para evitar crash si el campo es undefined
       const apiPayload = {
         name: data.name.trim(),
-        description: data.description.trim(),
+        description: data.description?.trim() || "", 
         social_impact: data.social_impact?.trim() || "",
+        
+        // Zod.coerce ya convirtió esto, pero Number() es doble seguridad (está bien)
         type_hours_id: Number(data.type_hours_id),
         req_hours: Number(data.req_hours),
         maximum_students: Number(data.maximum_students),
         req_min_year: Number(data.req_min_year),
+        
         req_gender: data.req_gender,
         req_career: data.req_career,
+        
         number_beneficiaries: Number(data.number_beneficiaries),
-        district_id: Number(data.district_id),
+        
+        // Manejo de opcionales numéricos
+        departament_id: data.departament_id ? Number(data.departament_id) : undefined,
+        district_id: data.district_id ? Number(data.district_id) : undefined,
+        
         start_date: data.start_date,
-        end_date: data.end_date,
+        end_date: data.end_date, // Puede ser null
+        
         active: Boolean(data.active),
         
-        // --- CAMBIO CRÍTICO: Enviar el array de IDs ---
-        institution_ids: data.institution_ids, 
+        // --- CAMBIO: Singular y obligatorio ---
+        institution_id: Number(data.institution_id), 
       }
 
-      // Validaciones básicas
-      if (!apiPayload.name) {
-        toast.error("El nombre del proyecto es requerido")
-        return
-      }
-      
-      // Validación de array de instituciones
-      if (!apiPayload.institution_ids || apiPayload.institution_ids.length === 0) {
-        toast.error("Debe seleccionar al menos una institución")
+      // Validaciones extra (aunque Zod ya cubre la mayoría)
+      if (!apiPayload.institution_id) {
+        toast.error("Debe seleccionar una institución")
+        setLoading(false)
         return
       }
 
-      // Validar fechas
+      // Validar fechas (solo si existe fecha fin)
       const startDate = new Date(apiPayload.start_date)
-      const endDate = new Date(apiPayload.end_date)
-
-      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        toast.error("Las fechas no son válidas")
-        return
+      
+      if (apiPayload.end_date) {
+        const endDate = new Date(apiPayload.end_date)
+        if (endDate <= startDate) {
+            toast.error("La fecha de fin debe ser posterior a la fecha de inicio")
+            setLoading(false)
+            return
+        }
       }
-      if (endDate <= startDate) {
-        toast.error("La fecha de fin debe ser posterior a la fecha de inicio")
-        return
-      }
-
-      console.log("Payload final que se enviará:", JSON.stringify(apiPayload, null, 2))
 
       if (activeEdit && data.id) {
-        console.log("Actualizando proyecto con ID:", data.id)
-        // La API espera number en el ID
+        // UPDATE
         const response = await updateProject(Number(data.id), apiPayload)
-        console.log("Respuesta de actualización:", response.data)
-        setActiveEdit(false)
-        setOpen(false)
-        toast.success(response.data.message || "Proyecto actualizado correctamente")
+        toast.success(response.data?.message || "Proyecto actualizado correctamente")
       } else {
-        console.log("Creando nuevo proyecto")
+        // CREATE
         const response = await createProject(apiPayload)
-        console.log("Respuesta de creación:", response.data)
-        toast.success(response.data.message || "Proyecto creado correctamente")
-        setOpen(false)
-      }
-    } catch (error: unknown) {
-      console.error("Error completo al crear/actualizar el proyecto:", error)
-      const err = error as AxiosError<{
-        message?: string
-        errors?: Record<string, string[]>
-      }>
-
-      let errorMessage = "Error al procesar el proyecto"
-
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message
-      } else if (err.response?.status === 500) {
-        errorMessage = "Error interno del servidor (Revise logs del backend)"
+        toast.success(response.data?.message || "Proyecto creado correctamente")
       }
 
-      toast.error(errorMessage)
-    } finally {
-      setLoading(false)
-      getAllProjects()
-    }
-  }
-
-  const getAllProjects = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await getProjects()
-      setProjects(data)
-    } catch (error) {
-      console.error("Error al cargar proyectos:", error)
-      const err = error as AxiosError<{ message?: string }>
-      // Si el error es 500, probablemente es desincronización backend/DB
-      const message = err.response?.status === 500 
-        ? "Error del servidor. Verifique que el backend esté actualizado." 
-        : err.response?.data?.message || "Error al cargar proyectos"
+      setOpen(false)
+      setActiveEdit(false)
+      await getAllProjects() // Recargar lista
       
+    } catch (error: unknown) {
+      console.error("Error en insertProject:", error)
+      const err = error as AxiosError<{ message?: string }>
+      const message = err.response?.data?.message || "Error al guardar el proyecto"
       toast.error(message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
+  // Cargar proyectos al montar el hook
   useEffect(() => {
     getAllProjects()
   }, [getAllProjects])
