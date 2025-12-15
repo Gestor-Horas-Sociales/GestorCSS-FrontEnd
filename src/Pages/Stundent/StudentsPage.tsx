@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
@@ -28,8 +28,6 @@ import TableStructure from "@/components/TableStructure";
 import { toast, Toaster } from "sonner";
 import GeneralAlert from "@/components/GeneralAlert";
 import type z from "zod";
-import { useDepartament } from "@/hooks/use-departament";
-import { useDistrict } from "@/hooks/use-district";
 import Spinner from "@/components/Spinner";
 import * as XLSX from "xlsx";
 import * as Papa from "papaparse";
@@ -61,9 +59,6 @@ export default function UsersPage() {
   } = useEstudiantes();
 
   const { carreras } = useCarrera();
-  const { departaments } = useDepartament();
-  const { departamentsDistrict, getAllDepartamentsByDistrict } = useDistrict();
-  const [idDepartament, setIdDepartment] = useState<number>(0);
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
   const [idDelete, setIdDelete] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,8 +77,6 @@ export default function UsersPage() {
       student_id_card: "",
       gender: "",
       active: false,
-      district_id: 0,
-      address: "",
       internal_hours: 0,
       external_hours: 0,
       career: {
@@ -92,18 +85,6 @@ export default function UsersPage() {
       },
     },
   });
-  useEffect(() => {
-    if (idDepartament) {
-      getAllDepartamentsByDistrict(idDepartament);
-    }
-  }, [idDepartament, getAllDepartamentsByDistrict]);
-
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      setIdDepartment(value.departmet_id ?? 0); // Si es undefined, usa 0
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
 
   const openDialogDelete = useCallback((id: number) => {
     setOpenAlertDelete(true);
@@ -121,19 +102,13 @@ export default function UsersPage() {
       career_year: number,
       student_id_card: string,
       gender: string,
-      district_id: number,
       active: boolean,
       internal_hours: number,
       external_hours: number,
-      address: string,
       career: { id: number; name: string } | null,
-      departament_id?: number // Nuevo parámetro
     ) => {
       setOpen(true);
       setActiveEdit(true);
-
-      // Primero establecer el departamento para cargar los distritos
-      setIdDepartment(departament_id || 0);
 
       form.reset({
         id,
@@ -146,9 +121,6 @@ export default function UsersPage() {
         active,
         internal_hours,
         external_hours,
-        address,
-        departmet_id: departament_id, // Usamos el nombre consistente
-        district_id,
         career: career
           ? { career_id: career.id, career_name: career.name }
           : { career_id: 1, career_name: "" },
@@ -234,11 +206,9 @@ export default function UsersPage() {
                 row.original.career_year,
                 row.original.student_id_card,
                 row.original.gender,
-                row.original.district_id,
                 row.original.active,
                 row.original.internal_hours ?? 0,
                 row.original.external_hours ?? 0,
-                row.original.address,
                 row.original.career
                   ? {
                       id: row.original.career.id,
@@ -278,20 +248,6 @@ export default function UsersPage() {
     setOpenAlertDelete(false);
     setIdDelete(0);
   };
-
-  // Efectos para departamentos/distritos (intactos)
-  useEffect(() => {
-    if (idDepartament) {
-      getAllDepartamentsByDistrict(idDepartament);
-    }
-  }, [idDepartament, getAllDepartamentsByDistrict]);
-
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      setIdDepartment(value.departmet_id ?? 0);
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
 
   const handleClick = () => {
     fileInputRef.current?.click();
@@ -494,8 +450,6 @@ export default function UsersPage() {
                 student_id_card: "",
                 gender: "",
                 active: false,
-                district_id: 0,
-                address: "",
                 internal_hours: 0,
                 external_hours: 0,
                 career: {
@@ -616,31 +570,6 @@ export default function UsersPage() {
                         Información Adicional
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormSelectField
-                          formField={form}
-                          nameField="departmet_id"
-                          label="Departamento"
-                          placeholder="Seleccione departamento"
-                          valueType="number"
-                          listRender={departaments.map((d) => ({
-                            key: d.id.toString(),
-                            textRender: d.name,
-                          }))}
-                          className="rounded-xl"
-                        />
-                        <FormSelectField
-                          formField={form}
-                          nameField="district_id"
-                          label="Distrito"
-                          placeholder="Seleccione distrito"
-                          valueType="number"
-                          disabled={idDepartament === 0}
-                          listRender={departamentsDistrict.map((d) => ({
-                            key: d.id.toString(),
-                            textRender: d.name,
-                          }))}
-                          className="rounded-xl"
-                        />
                         <FormTextField
                           formField={form}
                           nameField="internal_hours"
@@ -667,13 +596,6 @@ export default function UsersPage() {
                             { key: "true", textRender: "Activo" },
                             { key: "false", textRender: "Inactivo" },
                           ]}
-                          className="rounded-xl"
-                        />
-                        <FormTextField
-                          formField={form}
-                          nameField="address"
-                          label="Dirección"
-                          placeholder="Dirección"
                           className="rounded-xl"
                         />
                       </div>

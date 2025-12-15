@@ -19,10 +19,7 @@ export interface StudentType {
   gender: string;
   email: string;
   message?: string;
-  departmet_id?: number;
-  district_id: number;
   active: boolean;
-  address: string;
   career?: {
     id: number;
     name: string;
@@ -42,10 +39,7 @@ export const StudentSchema = z.object({
   career_year: z.number().int().min(1, { message: "Año de carrera debe ser al menos 1" }),
   gender: z.string().min(1, { message: "Género es requerido" }),
   email: z.string().min(1, { message: "Correo es requerido" }).email({ message: "Correo inválido" }),
-  departmet_id: z.number().int().optional(),
-  district_id: z.number().int().min(1, { message: "Distrito es requerido" }),
   active: z.boolean(),
-  address: z.string(),
   internal_hours: z.number().int().optional(),
   external_hours: z.number().int().optional(),
   career: z

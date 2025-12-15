@@ -116,8 +116,6 @@ export const useEstudiantes = () => {
         active: data.active ?? false,
         internal_hours: data.internal_hours ?? 0,
         external_hours: data.external_hours ?? 0,
-        address: data.address ?? "",
-        district_id: data.district_id,
         student_id_card: data.student_id_card ?? "",
         career_id: data.career?.career_id ?? 0,
       };
