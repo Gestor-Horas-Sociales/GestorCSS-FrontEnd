@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ProjectSchema, type ProjectType, type ProjectSchemaType } from "@/Types/ProyectType" // Importar ProjectSchemaType
+import { ProjectSchema, type ProjectType, type ProjectSchemaType } from "@/Types/ProyectType"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import FormTextField from "@/components/FormTextField"
 import FormSelectField from "@/components/FormSelectField"
@@ -13,7 +13,8 @@ import { useDepartament } from "@/hooks/use-departament"
 import { useDistrict } from "@/hooks/use-district"
 import { useCarrera } from "@/hooks/use-carrera"
 import { useProjects } from "@/hooks/use-projects"
-import { useEffect, useState } from "react"
+// 1. Agregamos useCallback al import
+import { useEffect, useState, useCallback } from "react"
 
 interface NewProyectoModalProps {
   open: boolean
@@ -30,7 +31,6 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
   const [isEditing, setIsEditing] = useState(false)
 
   const form = useForm<ProjectSchemaType>({
-    // Usar ProjectSchemaType aquí
     resolver: zodResolver(ProjectSchema),
     defaultValues: {
       name: "",
@@ -41,29 +41,42 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
       maximum_students: 1,
       req_min_year: 1,
       req_gender: "",
-      req_career: "0", // Aseguramos que el valor por defecto sea un string
+      req_career: "0",
       number_beneficiaries: 1,
       departament_id: 1,
       district_id: 1,
       start_date: new Date().toISOString().split("T")[0],
       end_date: new Date().toISOString().split("T")[0],
       active: true,
-      institution_ids: [1], // Ensure this is always an array
+      institution_ids: [1],
     },
   })
 
-  // Load project data when editing
-  useEffect(() => {
-    if (projectToEdit && open) {
-      setIsEditing(true)
-      loadProjectData(projectToEdit)
-    } else if (open && !projectToEdit) {
-      setIsEditing(false)
-      resetForm()
-    }
-  }, [projectToEdit, open])
+  // 2. Definimos resetForm ANTES del useEffect y con useCallback
+  const resetForm = useCallback(() => {
+    form.reset({
+      name: "",
+      description: "",
+      social_impact: "",
+      type_hours_id: 1,
+      req_hours: 1,
+      maximum_students: 1,
+      req_min_year: 1,
+      req_gender: "",
+      req_career: "0",
+      number_beneficiaries: 1,
+      departament_id: 1,
+      district_id: 1,
+      start_date: new Date().toISOString().split("T")[0],
+      end_date: new Date().toISOString().split("T")[0],
+      active: true,
+      institution_ids: [1],
+    })
+    setIdDepartment(0)
+  }, [form])
 
-  const loadProjectData = async (project: ProjectType) => {
+  // 3. Definimos loadProjectData ANTES del useEffect y con useCallback
+  const loadProjectData = useCallback(async (project: ProjectType) => {
     // If we have an ID, get fresh data from the server
     if (project.id) {
       const freshProject = await getProjectDetails(project.id)
@@ -97,13 +110,12 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
     } else if (typeof project.req_career === "number") {
       careerId = project.req_career
     } else if (typeof project.req_career === "string") {
-      // If req_career is a string (e.g., "Ingeniería Civil"), try to find its ID
       const foundCareer = carreras.find((c) => c.name === project.req_career)
       if (foundCareer) {
         careerId = foundCareer.id
       } else {
-        console.warn(`Carrera '${project.req_career}' no encontrada en la lista de carreras. Estableciendo a 0.`)
-        careerId = 0 // Fallback if career name not found
+        console.warn(`Carrera '${project.req_career}' no encontrada. Estableciendo a 0.`)
+        careerId = 0
       }
     }
 
@@ -122,7 +134,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
         maximum_students: project.maximum_students || 1,
         req_min_year: project.req_min_year || 1,
         req_gender: project.req_gender || "",
-        req_career: careerId.toString(), // Convertimos el ID numérico a string
+        req_career: careerId.toString(),
         number_beneficiaries: project.number_beneficiaries || 1,
         departament_id: departmentId,
         district_id: districtId,
@@ -138,29 +150,18 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
         institution_ids: Array.isArray(project.institution_ids) ? project.institution_ids : [project.institution_ids || 1],
       })
     }, 100)
-  }
+  }, [getProjectDetails, districts, carreras, form]) // Dependencias del useCallback
 
-  const resetForm = () => {
-    form.reset({
-      name: "",
-      description: "",
-      social_impact: "",
-      type_hours_id: 1,
-      req_hours: 1,
-      maximum_students: 1,
-      req_min_year: 1,
-      req_gender: "",
-      req_career: "0", // Ensure the default value is a string
-      number_beneficiaries: 1,
-      departament_id: 1,
-      district_id: 1,
-      start_date: new Date().toISOString().split("T")[0],
-      end_date: new Date().toISOString().split("T")[0],
-      active: true,
-      institution_ids: [1],
-    })
-    setIdDepartment(0)
-  }
+  // 4. Ahora el useEffect puede usar las funciones porque ya están declaradas
+  useEffect(() => {
+    if (projectToEdit && open) {
+      setIsEditing(true)
+      loadProjectData(projectToEdit)
+    } else if (open && !projectToEdit) {
+      setIsEditing(false)
+      resetForm()
+    }
+  }, [projectToEdit, open, loadProjectData, resetForm])
 
   // Watch for department changes to load districts
   useEffect(() => {
@@ -179,7 +180,6 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
   }, [form, idDepartament])
 
   const onSubmit = async (data: ProjectSchemaType) => {
-    // Usar ProjectSchemaType aquí
     await insertProject(data)
     onOpenChange(false)
   }
@@ -236,7 +236,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
                     nameField="type_hours_id"
                     label="Tipo de Horas"
                     placeholder="Seleccionar tipo"
-                    valueType="number" // Aseguramos que el valor sea numérico
+                    valueType="number"
                     listRender={[
                       { key: "1", textRender: "Horas Internas" },
                       { key: "2", textRender: "Horas Externas" },
@@ -299,7 +299,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
                   nameField="req_career"
                   label="Carrera Requerida"
                   placeholder="Seleccionar carrera"
-                  valueType="number" // Aseguramos que el valor sea numérico (ID de la carrera)
+                  valueType="number"
                   listRender={carreras.map((carrera) => ({
                     key: carrera.id.toString(),
                     textRender: carrera.name,
@@ -318,7 +318,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
                     nameField="departament_id"
                     label="Departamento"
                     placeholder="Seleccionar departamento"
-                    valueType="number" // Aseguramos que el valor sea numérico
+                    valueType="number"
                     listRender={departaments.map((dept) => ({
                       key: dept.id.toString(),
                       textRender: dept.name,
@@ -332,7 +332,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
                     label="Distrito"
                     placeholder="Seleccionar distrito"
                     disabled={idDepartament === 0}
-                    valueType="number" // Aseguramos que el valor sea numérico
+                    valueType="number"
                     listRender={departamentsDistrict.map((district) => ({
                       key: district.id.toString(),
                       textRender: district.name,
@@ -391,7 +391,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
                     nameField="active"
                     label="Estado"
                     placeholder="Seleccionar estado"
-                    valueType="boolean" // Aseguramos que el valor sea booleano
+                    valueType="boolean"
                     listRender={[
                       { key: "true", textRender: "Activo" },
                       { key: "false", textRender: "Inactivo" },

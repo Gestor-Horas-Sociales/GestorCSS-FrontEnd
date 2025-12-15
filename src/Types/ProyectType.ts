@@ -9,7 +9,10 @@ export const ProjectSchema = z.object({
   id: z.number().optional(),
 
   name: z.string().min(1, { message: "Nombre es requerido" }),
-  description: z.string().min(1, { message: "Descripción es requerida" }),
+
+  // CAMBIO 1: Descripción opcional (acepta string vacío)
+  description: z.string().optional(),
+
   social_impact: z.string().optional(),
 
   type_hours_id: z.number().int().min(1, { message: "Tipo de horas es requerido" }),
@@ -23,10 +26,14 @@ export const ProjectSchema = z.object({
   number_beneficiaries: z.number().int().min(1, { message: "Número de beneficiarios debe ser al menos 1" }),
 
   departament_id: z.number().int().optional(),
-  district_id: z.number().int().min(1, { message: "Distrito es requerido" }),
+
+  // CAMBIO 2: Distrito opcional/nullable (según tu modelo Prisma Int?)
+  district_id: z.number().int().optional().nullable(),
 
   start_date: z.string().min(1, { message: "Fecha de inicio es requerida" }),
-  end_date: z.string().min(1, { message: "Fecha de fin es requerida" }),
+
+  // CAMBIO 3: Fecha final opcional y nullable
+  end_date: z.string().optional().nullable(),
 
   active: z.boolean(),
 
@@ -43,8 +50,10 @@ export type ProjectSchemaType = z.infer<typeof ProjectSchema>;
 export interface ProjectType {
   id?: number;
   name: string;
-  description: string;
-  social_impact?: string;
+
+  // CAMBIO 4: Refleja que puede venir nulo de la BD
+  description?: string | null;
+  social_impact?: string | null;
 
   type_hours_id: number;
   req_hours: number;
@@ -57,14 +66,14 @@ export interface ProjectType {
   number_beneficiaries: number;
 
   departament_id?: number | DepartamentoType;
-  district_id: number | District;
+
+  // CAMBIO 5: Refleja que puede venir nulo de la BD
+  district_id?: number | District | null;
 
   start_date: string;
-  end_date: string;
+  end_date?: string | null;
 
   active: boolean;
-
-  // CAMBIO: Se eliminó 'institution_id' singular que sobraba.
 
   // Array de objetos (para mostrar nombres en la tabla)
   institutions?: InstitutionType[];

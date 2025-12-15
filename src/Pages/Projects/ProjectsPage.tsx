@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,13 +12,13 @@ import {
 import {
   BookOpen,
   Plus,
-  MapPin,
   Users,
   Target,
   Building,
   FilePenLine,
   Trash2,
   CalendarIcon,
+  GraduationCap,
 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ProjectSchema, type ProjectType } from "@/Types/ProyectType";
@@ -48,7 +48,6 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useInstitutions } from "@/hooks/use-institutions";
 
-// Imports para el Select Manual
 import {
   Select,
   SelectContent,
@@ -96,14 +95,14 @@ export default function ProjectsPage() {
       maximum_students: 1,
       req_min_year: 1,
       req_gender: "",
-      req_career: "",
+      req_career: "0",
       number_beneficiaries: 1,
       departament_id: 1,
       district_id: 1,
       start_date: new Date().toISOString().split("T")[0],
-      end_date: new Date().toISOString().split("T")[0],
+      end_date: undefined,
       active: true,
-      institution_ids: [0], // Inicializamos con 0 para mostrar un select vacío
+      institution_ids: [0],
     },
   });
 
@@ -130,7 +129,6 @@ export default function ProjectsPage() {
 
   const removeInstitutionSlot = (index: number) => {
     const current = form.getValues("institution_ids");
-    // Evitar dejar el array vacío, si borran el último dejamos uno vacío [0]
     if (current.length === 1) {
       form.setValue("institution_ids", [0]);
       return;
@@ -146,20 +144,18 @@ export default function ProjectsPage() {
     form.setValue("institution_ids", newArray);
   };
 
-  // --- MANEJO DEL SUBMIT (Limpieza de datos) ---
   const handleFormSubmit = (data: z.infer<typeof ProjectSchema>) => {
-    // 1. Filtramos los ceros (selects no seleccionados)
     const validInstitutionIds = data.institution_ids.filter((id) => id !== 0);
 
-    // 2. Validamos que quede al menos uno
     if (validInstitutionIds.length === 0) {
       toast.error("Debe seleccionar al menos una institución válida.");
       return;
     }
 
-    // 3. Enviamos los datos limpios
     insertProject({
       ...data,
+      description: data.description || "",
+      end_date: data.end_date || null,
       institution_ids: validInstitutionIds,
     });
   };
@@ -207,9 +203,14 @@ export default function ProjectsPage() {
           careerId = projectDetails.req_career.id;
         } else {
           careerId = Number(projectDetails.req_career);
+          if (isNaN(careerId)) {
+            const found = carreras.find(
+              (c) => c.name === projectDetails.req_career
+            );
+            if (found) careerId = found.id;
+          }
         }
 
-        // Recuperar instituciones asignadas
         const currentInstitutionIds =
           projectDetails.institutions && projectDetails.institutions.length > 0
             ? projectDetails.institutions.map((i) => i.id)
@@ -237,161 +238,211 @@ export default function ProjectsPage() {
               : "",
             end_date: projectDetails.end_date
               ? new Date(projectDetails.end_date).toISOString().split("T")[0]
-              : "",
+              : undefined,
             active: projectDetails.active ?? true,
             institution_ids: currentInstitutionIds,
           });
         }, 100);
       }
     },
-    [form, setOpen, setActiveEdit, getProjectDetails, districts]
+    [form, setOpen, setActiveEdit, getProjectDetails, districts, carreras]
   );
 
-  const columns: ColumnDef<ProjectType>[] = [
-    {
-      accessorKey: "name",
-      header: "Proyecto",
-      cell: ({ row }) => (
-        <div className="min-w-[150px]">
-          <div className="font-medium">{row.original.name}</div>
-          <div className="text-xs text-muted-foreground line-clamp-2">
-            {row.original.institutions &&
-            row.original.institutions.length > 0 ? (
-              <div className="flex gap-1 mt-1 flex-wrap">
-                <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600 border border-slate-200">
-                  {row.original.institutions.length}{" "}
-                  {row.original.institutions.length === 1
-                    ? "Institución"
-                    : "Instituciones"}
-                </span>
-              </div>
-            ) : (
-              <span className="text-xs text-red-400">Sin institución</span>
-            )}
+  // --- DEFINICIÓN DE COLUMNAS ---
+  const columns: ColumnDef<ProjectType>[] = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Proyecto",
+        cell: ({ row }) => (
+          <div className="min-w-[150px]">
+            <div className="font-medium">{row.original.name}</div>
+            <div className="text-xs text-muted-foreground line-clamp-2">
+              {row.original.institutions &&
+              row.original.institutions.length > 0 ? (
+                <div className="flex gap-1 mt-1 flex-wrap">
+                  <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600 border border-slate-200">
+                    {row.original.institutions.length}{" "}
+                    {row.original.institutions.length === 1
+                      ? "Institución"
+                      : "Instituciones"}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs text-red-400">Sin institución</span>
+              )}
+            </div>
           </div>
-        </div>
-      ),
-      size: 200,
-    },
-    {
-      id: "hours",
-      header: "Horas",
-      cell: ({ row }) => (
-        <div className="text-center space-y-1">
-          <div className="flex items-center justify-center gap-1">
-            <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-              {row.original.type_hours_id === 1
-                ? "Internas"
-                : row.original.type_hours_id === 2
-                ? "Externas"
-                : "Ambas"}
-            </span>
+        ),
+        size: 200,
+      },
+      {
+        accessorKey: "req_career",
+        header: "Carrera",
+        cell: ({ row }) => {
+          const val = row.original.req_career;
+          let careerName = "General";
+
+          // Lógica de visualización robusta
+          if (typeof val === "object" && val !== null && "name" in val) {
+            // Caso: Viene objeto carrera completo
+            careerName = val.name;
+          } else if (
+            (typeof val === "string" && !isNaN(Number(val))) ||
+            typeof val === "number"
+          ) {
+            // Caso: Viene ID (número o string numérico) -> Buscamos en catálogo
+            const found = carreras.find((c) => c.id === Number(val));
+            if (found) careerName = found.name;
+          } else if (typeof val === "string") {
+            // Caso: Viene el nombre directamente
+            careerName = val;
+          }
+
+          return (
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium">
+                {careerName}
+              </span>
+            </div>
+          );
+        },
+        size: 140,
+      },
+      {
+        id: "requirements",
+        header: "Requisitos",
+        cell: ({ row }) => (
+          <div className="text-center space-y-1">
+            <div className="text-sm">{row.original.req_min_year}° año</div>
+            <div className="text-xs capitalize">
+              {row.original.req_gender === "M"
+                ? "♂ Masc"
+                : row.original.req_gender === "F"
+                ? "♀ Fem"
+                : "⚥ Todos"}
+            </div>
           </div>
-          <div className="text-sm">{row.original.req_hours} hrs</div>
-        </div>
-      ),
-      size: 100,
-    },
-    {
-      id: "requirements",
-      header: "Requisitos",
-      cell: ({ row }) => (
-        <div className="text-center space-y-1">
-          <div className="text-sm">{row.original.req_min_year}° año</div>
-          <div className="text-xs capitalize">
-            {row.original.req_gender === "M"
-              ? "♂ Masc"
-              : row.original.req_gender === "F"
-              ? "♀ Fem"
-              : "⚥ Todos"}
-          </div>
-        </div>
-      ),
-      size: 120,
-    },
-    {
-      id: "location",
-      header: "Ubicación",
-      cell: ({ row }) => {
-        if (
-          row.original.district_id &&
-          typeof row.original.district_id === "object" &&
-          "departament" in row.original.district_id
-        ) {
+        ),
+        size: 100,
+      },
+      {
+        id: "location",
+        header: "Ubicación",
+        cell: ({ row }) => {
+          let deptName = "N/A";
+          let distName = "";
+
+          if (
+            typeof row.original.district_id === "object" &&
+            row.original.district_id !== null &&
+            "departament" in row.original.district_id
+          ) {
+            deptName = row.original.district_id.departament?.name || "N/A";
+            distName = row.original.district_id.name;
+          } else {
+            const distId = Number(row.original.district_id);
+            const foundDist = districts.find((d) => d.id === distId);
+            if (foundDist) {
+              distName = foundDist.name;
+              const foundDept = departaments.find(
+                (d) => d.id === foundDist.departament_id
+              );
+              if (foundDept) deptName = foundDept.name;
+            }
+          }
+
           return (
             <div className="min-w-[120px]">
-              <div className="text-sm">
-                {row.original.district_id.departament?.name}
+              <div className="text-sm font-medium">{deptName}</div>
+              <div className="text-xs text-muted-foreground">{distName}</div>
+            </div>
+          );
+        },
+        size: 150,
+      },
+      {
+        id: "cupos_vs_asignados",
+        header: "Asignación",
+        cell: ({ row }) => {
+          const asignados = (row.original as any).students?.length || 0;
+          const cupos = row.original.maximum_students;
+          const porcentaje = Math.min(
+            100,
+            Math.round((asignados / cupos) * 100)
+          );
+
+          return (
+            <div className="flex flex-col gap-1 w-full max-w-[100px]">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-blue-600">
+                  {asignados} Asig.
+                </span>
+                <span className="text-muted-foreground">/ {cupos} Cupos</span>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {row.original.district_id.name}
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500"
+                  style={{ width: `${porcentaje}%` }}
+                ></div>
               </div>
             </div>
           );
-        }
-        return (
-          <div className="text-xs text-muted-foreground">
-            ID:{" "}
-            {typeof row.original.district_id === "object"
-              ? row.original.district_id
-              : row.original.district_id}
-          </div>
-        );
+        },
+        size: 130,
       },
-      size: 150,
-    },
-    {
-      id: "details",
-      header: "Cupos",
-      cell: ({ row }) => (
-        <div className="text-center">
-          <span className="font-medium">{row.original.maximum_students}</span>
-        </div>
-      ),
-      size: 80,
-    },
-    {
-      accessorKey: "active",
-      header: "Estado",
-      cell: ({ row }) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            row.original.active
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
-          }`}
-        >
-          {row.original.active ? "Activo" : "Inactivo"}
-        </span>
-      ),
-      size: 100,
-    },
-    {
-      id: "actions",
-      header: "",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => editProject(row.original.id ?? 0)}
-            disabled={loadingProject}
+      {
+        accessorKey: "active",
+        header: "Estado",
+        cell: ({ row }) => (
+          <span
+            className={`px-2 py-1 rounded-full text-xs border ${
+              row.original.active
+                ? "bg-green-50 text-green-700 border-green-200"
+                : "bg-gray-100 text-red-600 border-red-200"
+            }`}
           >
-            <FilePenLine className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-red-600"
-            onClick={() => openDialogDelete(row.original.id ?? 0)}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        </div>
-      ),
-      size: 80,
-    },
-  ];
+            {row.original.active ? "Activo" : "Finalizado"}
+          </span>
+        ),
+        size: 100,
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editProject(row.original.id ?? 0)}
+              disabled={loadingProject}
+            >
+              <FilePenLine className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={() => openDialogDelete(row.original.id ?? 0)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        ),
+        size: 80,
+      },
+    ],
+    [
+      districts,
+      departaments,
+      carreras,
+      editProject,
+      loadingProject,
+      openDialogDelete,
+    ]
+  );
 
   const { globalFilter, setGlobalFilter, table } = useTable({
     data: projects,
@@ -444,7 +495,7 @@ export default function ProjectsPage() {
                     departament_id: 1,
                     district_id: 1,
                     start_date: new Date().toISOString().split("T")[0],
-                    end_date: new Date().toISOString().split("T")[0],
+                    end_date: undefined,
                     active: true,
                     institution_ids: [0],
                   });
@@ -461,7 +512,6 @@ export default function ProjectsPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                  {/* AQUÍ EL CAMBIO CLAVE: Usamos handleFormSubmit en lugar de pasarlo directo */}
                   <form
                     onSubmit={form.handleSubmit(handleFormSubmit, (e) =>
                       console.log(e)
@@ -482,7 +532,6 @@ export default function ProjectsPage() {
                             />
                           </div>
 
-                          {/* --- SECCIÓN DINÁMICA DE INSTITUCIONES --- */}
                           <div className="md:col-span-2 space-y-3">
                             <FormLabel
                               className={cn(
@@ -501,7 +550,6 @@ export default function ProjectsPage() {
                                 >
                                   <div className="flex-1">
                                     <Select
-                                      // Fix: Si es 0 (vacío), pasamos string vacío para que salga el placeholder
                                       value={
                                         instId === 0 ? "" : instId.toString()
                                       }
@@ -550,13 +598,12 @@ export default function ProjectsPage() {
                               {form.formState.errors.institution_ids?.message}
                             </FormMessage>
                           </div>
-                          {/* ------------------------------------------- */}
 
                           <div className="md:col-span-2">
                             <FormTextField
                               formField={form}
                               nameField="description"
-                              label="Descripción"
+                              label="Descripción (Opcional)"
                               isTextArea={true}
                               rows={3}
                             />
@@ -635,7 +682,9 @@ export default function ProjectsPage() {
                                   <SelectContent>
                                     <SelectItem value="M">Masculino</SelectItem>
                                     <SelectItem value="F">Femenino</SelectItem>
-                                    <SelectItem value="O">Indiferente</SelectItem>
+                                    <SelectItem value="O">
+                                      Indiferente
+                                    </SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -709,7 +758,7 @@ export default function ProjectsPage() {
                               valueType="boolean"
                               listRender={[
                                 { key: "true", textRender: "Activo" },
-                                { key: "false", textRender: "Inactivo" },
+                                { key: "false", textRender: "Finalizado" },
                               ]}
                             />
                           </div>
@@ -766,7 +815,7 @@ export default function ProjectsPage() {
                                     : ""
                                 )}
                               >
-                                Fecha Final
+                                Fecha Final (Opcional)
                               </FormLabel>
                               <FormControl>
                                 <div className="relative">
@@ -809,9 +858,6 @@ export default function ProjectsPage() {
                 </Form>
               </DialogContent>
             </Dialog>
-            <Button variant="outline">
-              <MapPin className="w-4 h-4 mr-2" /> Ver Mapa
-            </Button>
           </div>
         </div>
 
@@ -862,12 +908,16 @@ export default function ProjectsPage() {
           </Card>
         </div>
 
-        <TableStructure
-          globalFilter={globalFilter}
-          setGlobalFilter={setGlobalFilter}
-          columns={columns}
-          table={table}
-        />
+        <div className="rounded-md border overflow-hidden">
+          <div className="overflow-x-auto w-full">
+            <TableStructure
+              globalFilter={globalFilter}
+              setGlobalFilter={setGlobalFilter}
+              columns={columns}
+              table={table}
+            />
+          </div>
+        </div>
       </div>
       <GeneralAlert
         openAlert={openAlertDelete}
