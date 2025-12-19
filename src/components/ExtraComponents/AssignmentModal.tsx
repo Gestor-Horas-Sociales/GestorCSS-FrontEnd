@@ -14,14 +14,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, UserPlus } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Trash2, UserPlus, Users } from "lucide-react";
 import { useAssignment } from "@/hooks/use-assignment";
 import type { AssignmentStatus } from "@/Types/AssignmentType";
 import Spinner from "@/components/Spinner";
-
-// 1. IMPORTAMOS EL HOOK REAL
-import { useEstudiantes } from "@/hooks/use-estudiantes"; 
+import { useEstudiantes } from "@/hooks/use-estudiantes";
 
 interface AssignmentModalProps {
   isOpen: boolean;
@@ -36,7 +41,6 @@ export default function AssignmentModal({
   projectId,
   projectName,
 }: AssignmentModalProps) {
-  // Hook de asignaciones (logica de union)
   const {
     assignments,
     isLoading: loadingAssignments,
@@ -46,21 +50,15 @@ export default function AssignmentModal({
     removeAssignment,
   } = useAssignment();
 
-  // 2. USAMOS EL HOOK DE ESTUDIANTES (Data real)
   const { estudiantes, loading: loadingStudents } = useEstudiantes();
-
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
 
-  // Cargar asignaciones al abrir el modal
   useEffect(() => {
     if (isOpen && projectId) {
       fetchAssignments(projectId);
     }
   }, [isOpen, projectId, fetchAssignments]);
 
-  // 3. FILTRO INTELIGENTE:
-  // Calculamos qué estudiantes NO están asignados todavía a este proyecto.
-  // Así evitas duplicados en el Select.
   const availableStudents = useMemo(() => {
     if (!estudiantes) return [];
     return estudiantes.filter(
@@ -70,137 +68,209 @@ export default function AssignmentModal({
 
   const handleAddStudent = async () => {
     if (!selectedStudentId) return;
-    
     const success = await addAssignment({
       project_id: projectId,
       student_id: Number(selectedStudentId),
-      status: "ACTIVE"
+      status: "ACTIVE",
     });
-
     if (success) {
-      setSelectedStudentId(""); // Limpiar select tras éxito
+      setSelectedStudentId("");
     }
   };
 
   const isLoading = loadingAssignments || loadingStudents;
 
+  // Función auxiliar para colores de estado
+  const getStatusColorClass = (status: string) => {
+    switch (status) {
+      case "ACTIVE":
+        return "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800";
+      case "COMPLETED":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800";
+      case "ABANDONED":
+        return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800";
+      default:
+        return "";
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+      {/* CAMBIO 1: sm:max-w-5xl para dar más ancho y w-[95vw] para móviles */}
+      <DialogContent className="sm:max-w-5xl w-full max-w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6 bg-background border-border">
         <DialogHeader>
-          <DialogTitle>Gestionar Estudiantes: {projectName}</DialogTitle>
-          <DialogDescription>
-            Agrega estudiantes, cambia su estado o elimínalos del proyecto.
+          <DialogTitle className="flex items-center gap-2 text-xl text-foreground">
+            <Users className="w-5 h-5 text-primary" />
+            Gestionar Estudiantes
+          </DialogTitle>
+          <DialogDescription className="line-clamp-1 text-muted-foreground">
+            Proyecto:{" "}
+            <span className="font-medium text-foreground">{projectName}</span>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* SECCIÓN: AGREGAR ESTUDIANTE */}
-          <div className="flex items-end gap-3 p-4 bg-slate-50 rounded-lg border">
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-medium">Agregar Estudiante</label>
-              <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Seleccionar estudiante..." />
+        <div className="space-y-6 mt-2">
+          {/* SECCIÓN: AGREGAR ESTUDIANTE 
+              CAMBIO 2: Layout flexible. En móvil (default) es columna, en sm es fila.
+          */}
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 p-4 bg-muted/40 rounded-lg border border-border">
+            <div className="w-full sm:flex-1 space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Agregar Nuevo Estudiante
+              </label>
+              <Select
+                value={selectedStudentId}
+                onValueChange={setSelectedStudentId}
+              >
+                <SelectTrigger className="bg-background text-foreground w-full border-input">
+                  <SelectValue placeholder="Buscar por nombre o carnet..." />
                 </SelectTrigger>
                 <SelectContent>
                   {availableStudents.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground text-center">
-                      No hay estudiantes disponibles o todos ya están asignados.
+                    <div className="p-3 text-sm text-muted-foreground text-center">
+                      Todos los estudiantes disponibles ya han sido asignados.
                     </div>
                   ) : (
-                    // 4. MAPEAMOS LOS DATOS REALES
                     availableStudents.map((student) => (
-                      <SelectItem key={student.id} value={student.id.toString()}>
-                        {/* Usamos las propiedades reales: student_id_card, name, lastname */}
-                        {student.student_id_card} - {student.name} {student.lastname}
+                      <SelectItem
+                        key={student.id}
+                        value={student.id.toString()}
+                      >
+                        <span className="font-medium">
+                          {student.student_id_card}
+                        </span>
+                        <span className="text-muted-foreground mx-1">-</span>
+                        {student.name} {student.lastname}
                       </SelectItem>
                     ))
                   )}
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleAddStudent} disabled={!selectedStudentId || isLoading}>
+
+            {/* Botón full width en móvil, auto en desktop */}
+            <Button
+              onClick={handleAddStudent}
+              disabled={!selectedStudentId || isLoading}
+              className="w-full sm:w-auto shrink-0"
+            >
               <UserPlus className="w-4 h-4 mr-2" />
               Asignar
             </Button>
           </div>
 
           {/* SECCIÓN: TABLA DE ASIGNADOS */}
-          <div className="rounded-md border relative min-h-[200px]">
+          <div className="rounded-md border border-border overflow-hidden relative min-h-[200px] flex flex-col bg-background">
             {loadingAssignments && (
-              <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center">
+              <div className="absolute inset-0 bg-background/80 z-20 flex items-center justify-center backdrop-blur-sm">
                 <Spinner />
               </div>
             )}
-            
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Estudiante</TableHead>
-                  <TableHead>Carnet</TableHead>
-                  <TableHead>Fecha Asignación</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assignments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                      No hay estudiantes asignados a este proyecto.
-                    </TableCell>
+
+            {/* Scroll horizontal solo si es necesario */}
+            <div className="overflow-x-auto w-full">
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="whitespace-nowrap text-muted-foreground w-[30%]">
+                      Estudiante
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-muted-foreground w-[15%]">
+                      Carnet
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-muted-foreground w-[15%]">
+                      Asignado
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-muted-foreground w-[25%]">
+                      Estado
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-right text-muted-foreground w-[15%]">
+                      Acciones
+                    </TableHead>
                   </TableRow>
-                ) : (
-                  assignments.map((assignment) => (
-                    <TableRow key={`${assignment.project_id}-${assignment.student_id}`}>
-                      <TableCell className="font-medium">
-                        {/* Como en el backend incluimos 'student', aquí mostramos sus datos */}
-                        {assignment.student ? `${assignment.student.name} ${assignment.student.lastname}` : "Cargando..."}
-                      </TableCell>
-                      <TableCell>
-                         {assignment.student?.student_id_card || "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        {/* assignedAt viene del backend si la tabla tiene createdAt, si no usas new Date() */}
-                        {assignment.assignedAt 
-                            ? new Date(assignment.assignedAt).toLocaleDateString() 
-                            : new Date().toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Select 
-                          defaultValue={assignment.status} 
-                          onValueChange={(val) => changeStatus(projectId, assignment.student_id, val as AssignmentStatus)}
-                        >
-                          <SelectTrigger className={`h-8 w-[130px] text-xs font-medium border-none
-                            ${assignment.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 
-                              assignment.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' : 
-                              'bg-red-100 text-red-700'
-                            }`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ACTIVE">Activo</SelectItem>
-                            <SelectItem value="COMPLETED">Finalizado</SelectItem>
-                            <SelectItem value="ABANDONED">Abandonado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => removeAssignment(projectId, assignment.student_id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {assignments.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="text-center h-32 text-muted-foreground"
+                      >
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <Users className="w-8 h-8 opacity-20" />
+                          <p>No hay estudiantes asignados a este proyecto.</p>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    assignments.map((assignment) => (
+                      <TableRow
+                        key={`${assignment.project_id}-${assignment.student_id}`}
+                        className="hover:bg-muted/30"
+                      >
+                        <TableCell className="font-medium min-w-[140px] text-foreground">
+                          {assignment.student
+                            ? `${assignment.student.name} ${assignment.student.lastname}`
+                            : "Cargando..."}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-foreground">
+                          {assignment.student?.student_id_card || "N/A"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground whitespace-nowrap">
+                          {assignment.assignedAt
+                            ? new Date(
+                                assignment.assignedAt
+                              ).toLocaleDateString()
+                            : new Date().toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="min-w-[140px]">
+                          <Select
+                            defaultValue={assignment.status}
+                            onValueChange={(val) =>
+                              changeStatus(
+                                projectId,
+                                assignment.student_id,
+                                val as AssignmentStatus
+                              )
+                            }
+                          >
+                            <SelectTrigger
+                              className={`h-8 w-full text-xs font-semibold border transition-colors ${getStatusColorClass(
+                                assignment.status
+                              )}`}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ACTIVE">Activo</SelectItem>
+                              <SelectItem value="COMPLETED">
+                                Finalizado
+                              </SelectItem>
+                              <SelectItem value="ABANDONED">
+                                Abandonado
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            onClick={() =>
+                              removeAssignment(projectId, assignment.student_id)
+                            }
+                            title="Desvincular estudiante"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
       </DialogContent>
