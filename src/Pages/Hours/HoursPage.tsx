@@ -1,64 +1,92 @@
-"use client"
-
-import { Button } from "@/components/ui/button"
-import { Plus, Edit, XCircle, CalendarIcon } from "lucide-react"
-import { useHoursRecord } from "@/hooks/use-hours"
-import Spinner from "@/components/Spinner"
-import type { ColumnDef } from "@tanstack/react-table"
-import type { HoursRecordType } from "@/Types/HoursType"
-import { HoursRecordSchema } from "@/Types/HoursType"
-import { useTable } from "@/hooks/useTable"
-import TableStructure from "@/components/TableStructure"
-import { useCallback, useState, useEffect, useRef } from "react"
-import { Toaster } from "sonner"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
-import FormTextField from "@/components/FormTextField"
-import { useEstudiantes } from "@/hooks/use-estudiantes"
-import FormSelectField from "@/components/FormSelectField"
-import type { z } from "zod"
-import GeneralAlert from "@/components/GeneralAlert"
-import { Badge } from "@/components/ui/badge"
-import { useProjects } from "@/hooks/use-projects"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button";
+import { Plus, Edit, XCircle, CalendarIcon } from "lucide-react";
+import { useHoursRecord } from "@/hooks/use-hours";
+import Spinner from "@/components/Spinner";
+import type { ColumnDef } from "@tanstack/react-table";
+import type { HoursRecordType } from "@/Types/HoursType";
+import { HoursRecordSchema } from "@/Types/HoursType";
+import { useTable } from "@/hooks/useTable";
+import TableStructure from "@/components/TableStructure";
+import { useCallback, useState, useEffect, useRef, useMemo } from "react";
+import { Toaster } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import FormTextField from "@/components/FormTextField";
+import { useEstudiantes } from "@/hooks/use-estudiantes";
+import FormSelectField from "@/components/FormSelectField";
+import type { z } from "zod";
+import GeneralAlert from "@/components/GeneralAlert";
+import { Badge } from "@/components/ui/badge";
+import { useProjects } from "@/hooks/use-projects";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export default function HoursPage() {
-  const { hours, loading, handleDeleteHoursRecord, open, setOpen, activeEdit, setActiveEdit, insertHoursRecord } =
-    useHoursRecord()
+  const {
+    hours,
+    loading,
+    handleDeleteHoursRecord,
+    open,
+    setOpen,
+    activeEdit,
+    setActiveEdit,
+    insertHoursRecord,
+  } = useHoursRecord();
 
-  const { estudiantes } = useEstudiantes()
-  const { projects, getAllProjects } = useProjects()
+  const { estudiantes } = useEstudiantes();
+  const { projects } = useProjects();
 
-  const [openAlertDelete, setOpenAlertDelete] = useState(false)
-  const [idDelete, setIdDelete] = useState<number>(0)
+  const [openAlertDelete, setOpenAlertDelete] = useState(false);
+  const [idDelete, setIdDelete] = useState<number>(0);
 
   // Referencia para el input de fecha
-  const dateRegisterInputRef = useRef<HTMLInputElement | null>(null)
-
-  useEffect(() => {
-    getAllProjects()
-  }, [getAllProjects])
+  const dateRegisterInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<z.infer<typeof HoursRecordSchema>>({
     resolver: zodResolver(HoursRecordSchema),
     defaultValues: {
       id: undefined,
-      student_id: 0,
-      project_id: 0,
       date_register: new Date(), // Establecer la fecha actual como valor por defecto
       description: "",
       hours: 0,
-      type_hours_id: 0,
     },
-  })
+  });
+
+  const selectedStudentId = form.watch("student_id");
+
+  const filteredProjects = useMemo(() => {
+    if (!selectedStudentId || selectedStudentId === 0) return [];
+
+    return projects.filter((project) =>
+      project.assignments?.some(
+        (assignment) => assignment.student_id === selectedStudentId
+      )
+    );
+  }, [projects, selectedStudentId]);
+
+  useEffect(() => {
+    form.setValue("project_id", 0);
+  }, [selectedStudentId, form]);
 
   const openDialogDelete = useCallback((id: number) => {
-    setOpenAlertDelete(true)
-    setIdDelete(id)
-  }, [])
+    setOpenAlertDelete(true);
+    setIdDelete(id);
+  }, []);
 
   const editHoursRecord = useCallback(
     (
@@ -68,10 +96,10 @@ export default function HoursPage() {
       date_register: Date,
       description: string,
       hours: number,
-      type_hours_id: number,
+      type_hours_id: number
     ) => {
-      setOpen(true)
-      setActiveEdit(true)
+      setOpen(true);
+      setActiveEdit(true);
       form.reset({
         id,
         student_id,
@@ -80,10 +108,10 @@ export default function HoursPage() {
         description,
         hours,
         type_hours_id,
-      })
+      });
     },
-    [form, setOpen, setActiveEdit],
-  )
+    [form, setOpen, setActiveEdit]
+  );
 
   const columns: ColumnDef<HoursRecordType>[] = [
     {
@@ -97,7 +125,7 @@ export default function HoursPage() {
       accessorKey: "student",
       header: "Estudiante",
       cell: ({ row }) => {
-        const student = row.original.student
+        const student = row.original.student;
         return student ? (
           <div>
             <div className="font-medium">
@@ -109,76 +137,65 @@ export default function HoursPage() {
           </div>
         ) : (
           <span className="text-muted-foreground italic">No asignado</span>
-        )
+        );
       },
     },
     {
       accessorKey: "project",
       header: "Proyecto",
       cell: ({ row }) => {
-        const project = row.original.project
+        const project = row.original.project;
         return project ? (
           <div>
             <div className="font-medium">{project.name}</div>
           </div>
         ) : (
           <span className="text-muted-foreground italic">No asignado</span>
-        )
+        );
       },
     },
     {
       accessorKey: "hours",
       header: "Horas",
       cell: ({ row }) => {
-        const hours = row.original.hours
+        const hours = row.original.hours;
         return (
           <div className="text-center">
             <div className="text-lg font-bold">{hours}</div>
             <div className="text-xs text-muted-foreground">horas</div>
           </div>
-        )
+        );
       },
     },
     {
       accessorKey: "date_register",
       header: "Fecha",
       cell: ({ row }) => {
-        const date = new Date(row.original.date_register)
+        const date = new Date(row.original.date_register);
         return date.toLocaleDateString("es-ES", {
           year: "numeric",
           month: "2-digit",
           day: "2-digit",
-        })
+        });
       },
     },
     {
       accessorKey: "type_hours_id",
       header: "Tipo de Horas",
       cell: ({ row }) => {
-        const typeHours = row.original.type_hours_id
+        const typeHours = row.original.type_hours_id;
         return (
-          <Badge variant={typeHours === 1 ? "default" : "secondary"}>{typeHours === 1 ? "Internas" : "Externas"}</Badge>
-        )
-      },
-    },
-    {
-      accessorKey: "estado",
-      header: "Estado",
-      cell: ({ row }) => {
-        const estado = row.original.project?.active
-        return (
-          <div className="flex items-center">
-            {estado === true && <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>}
-            {estado === false && <Badge className="bg-green-100 text-green-800">Aprobado</Badge>}
-          </div>
-        )
+          <Badge variant={typeHours === 1 ? "default" : "secondary"}>
+            {typeHours === 1 ? "Internas" : "Externas"}
+          </Badge>
+        );
       },
     },
     {
       id: "actions",
       header: "Acciones",
       cell: ({ row }) => {
-        const registro = row.original
+        const registro = row.original;
         return (
           <div className="flex items-center gap-2">
             <Button
@@ -192,7 +209,7 @@ export default function HoursPage() {
                   registro.date_register,
                   registro.description,
                   registro.hours,
-                  registro.type_hours_id,
+                  registro.type_hours_id
                 )
               }
             >
@@ -206,26 +223,26 @@ export default function HoursPage() {
               <XCircle className="w-4 h-4 text-red-600" />
             </Button>
           </div>
-        )
+        );
       },
     },
-  ]
+  ];
 
   const { globalFilter, setGlobalFilter, table } = useTable({
     data: hours,
     columns,
-  })
+  });
 
   const cancelDelete = () => {
-    setOpenAlertDelete(false)
-    setIdDelete(0)
-  }
+    setOpenAlertDelete(false);
+    setIdDelete(0);
+  };
 
   const confirmDelete = async () => {
-    await handleDeleteHoursRecord(idDelete)
-    setOpenAlertDelete(false)
-    setIdDelete(0)
-  }
+    await handleDeleteHoursRecord(idDelete);
+    setOpenAlertDelete(false);
+    setIdDelete(0);
+  };
 
   return (
     <>
@@ -235,14 +252,15 @@ export default function HoursPage() {
           <div>
             <h1 className="text-3xl font-bold">Seguimiento de Horas</h1>
             <p className="text-muted-foreground">
-              Registro, validación y seguimiento de horas sociales y profesionales
+              Registro, validación y seguimiento de horas sociales y
+              profesionales
             </p>
           </div>
           <Button
             className="rounded-md shadow-sm cursor-pointer"
             onClick={() => {
-              setOpen(true)
-              setActiveEdit(false)
+              setOpen(true);
+              setActiveEdit(false);
               form.reset({
                 student_id: 0,
                 project_id: 0,
@@ -250,7 +268,7 @@ export default function HoursPage() {
                 description: "",
                 hours: 0,
                 type_hours_id: 0,
-              })
+              });
             }}
           >
             <Plus className="w-4 h-4" />
@@ -261,9 +279,9 @@ export default function HoursPage() {
         <Dialog
           open={open}
           onOpenChange={(isOpen) => {
-            setOpen(isOpen)
+            setOpen(isOpen);
             if (!isOpen) {
-              setActiveEdit(false)
+              setActiveEdit(false);
               form.reset({
                 student_id: 0,
                 project_id: 0,
@@ -271,13 +289,17 @@ export default function HoursPage() {
                 description: "",
                 hours: 0,
                 type_hours_id: 0,
-              })
+              });
             }
           }}
         >
           <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
             <DialogHeader>
-              <DialogTitle>{activeEdit ? "Editar Registro de Horas" : "Nuevo Registro de Horas"}</DialogTitle>
+              <DialogTitle>
+                {activeEdit
+                  ? "Editar Registro de Horas"
+                  : "Nuevo Registro de Horas"}
+              </DialogTitle>
               <DialogDescription>
                 {activeEdit
                   ? "Editar los detalles del registro de horas."
@@ -307,13 +329,18 @@ export default function HoursPage() {
                         formField={form}
                         nameField="project_id"
                         label="Proyecto"
-                        placeholder="Seleccione proyecto"
-                        listRender={projects.map((project) => ({
-                          key: (project.id ?? "").toString(),
-                          textRender: `${project.name}${project.description ? ` - ${project.description.substring(0, 20)}...` : ""}`,
-                          value: project.id,
+                        placeholder={
+                          !selectedStudentId
+                            ? "Seleccione primero un estudiante"
+                            : filteredProjects.length === 0
+                            ? "Este estudiante no tiene proyectos"
+                            : "Seleccione proyecto"
+                        }
+                        listRender={filteredProjects.map((project) => ({
+                          key: project.id.toString(),
+                          textRender: project.name,
                         }))}
-                        className="min-w-0"
+                        disabled={!selectedStudentId || selectedStudentId === 0}
                       />
                     </div>
                   </div>
@@ -349,14 +376,19 @@ export default function HoursPage() {
                       render={({ field }) => {
                         // Asegurarse de que field.value sea un objeto Date válido
                         const dateValue =
-                          field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value : new Date() // Usar la fecha actual si no es válida
+                          field.value instanceof Date &&
+                          !isNaN(field.value.getTime())
+                            ? field.value
+                            : new Date(); // Usar la fecha actual si no es válida
 
                         return (
                           <FormItem>
                             <FormLabel
                               htmlFor="input-date-register"
                               className={cn(
-                                form.formState.errors.date_register ? "text-red-600" : "dark:text-secondary",
+                                form.formState.errors.date_register
+                                  ? "text-red-600"
+                                  : "dark:text-secondary"
                               )}
                             >
                               Fecha
@@ -370,13 +402,17 @@ export default function HoursPage() {
                                   className="w-full focus-visible:ring-primary dark:border-primary-dark"
                                   value={dateValue.toISOString().split("T")[0]} // Formato YYYY-MM-DD para input type="date"
                                   onChange={(e) => {
-                                    const selectedDate = new Date(e.target.value)
-                                    field.onChange(selectedDate) // Guardar como Date object en el formulario
+                                    const selectedDate = new Date(
+                                      e.target.value
+                                    );
+                                    field.onChange(selectedDate); // Guardar como Date object en el formulario
                                   }}
                                 />
                                 <span
                                   className="absolute right-3 top-1/2 transform -translate-y-1/2 dark:text-white cursor-pointer"
-                                  onClick={() => dateRegisterInputRef.current?.showPicker()}
+                                  onClick={() =>
+                                    dateRegisterInputRef.current?.showPicker()
+                                  }
                                 >
                                   <CalendarIcon className="h-5 w-5" />
                                 </span>
@@ -384,7 +420,7 @@ export default function HoursPage() {
                             </FormControl>
                             <FormMessage className="text-red-600" />
                           </FormItem>
-                        )
+                        );
                       }}
                     />
                   </div>
@@ -410,7 +446,12 @@ export default function HoursPage() {
           </DialogContent>
         </Dialog>
 
-        <TableStructure globalFilter={globalFilter} setGlobalFilter={setGlobalFilter} columns={columns} table={table} />
+        <TableStructure
+          globalFilter={globalFilter}
+          setGlobalFilter={setGlobalFilter}
+          columns={columns}
+          table={table}
+        />
       </div>
       <GeneralAlert
         title="¿Estás seguro de eliminar este registro de horas?"
@@ -423,5 +464,5 @@ export default function HoursPage() {
       />
       <Toaster position="top-right" />
     </>
-  )
+  );
 }

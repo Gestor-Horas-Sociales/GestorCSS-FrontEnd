@@ -1,5 +1,8 @@
 import { api } from "./axios";
-import type { ProjectType, ProjectSchemaType } from "@/Types/ProyectType";
+import type {
+  ProjectType,
+  ProjectSchemaType,
+} from "@/Types/ProyectType";
 
 // Obtener todos: Retorna la estructura completa (lectura)
 export const getProjects = async () => {
@@ -19,9 +22,12 @@ export const createProject = (data: ProjectSchemaType) =>
 
 // Actualizar: Recibe ID number y parcial del Schema
 export const updateProject = (id: number, data: Partial<ProjectSchemaType>) => {
-  return api.patch<{ data: ProjectType; message: string }>(`/projects/${id}`, data);
+  return api.patch<{ data: ProjectType; message: string }>(
+    `/projects/${id}`,
+    data
+  );
 };
 
 // Eliminar: Recibe number
-export const deleteProject = (id: number) => 
+export const deleteProject = (id: number) =>
   api.delete<{ message: string }>(`/projects/${id}`);

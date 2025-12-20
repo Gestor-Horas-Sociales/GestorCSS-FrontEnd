@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { AxiosError } from "axios";
+import axios, { AxiosError } from "axios";
 import { StudentSchema } from "@/Types/StudentType";
 import type { StudentType, StudentExcel } from "@/Types/StudentType";
 import {
@@ -32,7 +32,10 @@ export const useEstudiantes = () => {
     setLoading(true);
     try {
       const response = await createEstudiantesFromExcel({ students });
-      console.log("Respuesta de insertar estudiantes desde Excel:", response.data);
+      console.log(
+        "Respuesta de insertar estudiantes desde Excel:",
+        response.data
+      );
       toast.success(`Se insertaron ${response.data.inserted} estudiantes`);
       if (response.data.errors?.length) {
         console.warn("Errores en algunos registros:", response.data.errors);
@@ -86,9 +89,17 @@ export const useEstudiantes = () => {
       await deleteEstudiante(id.toString());
       toast.success("Estudiante eliminado correctamente");
       await getAllStudents();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error al eliminar el estudiante:", err);
-      toast.error("Error al eliminar el estudiante");
+
+      if (axios.isAxiosError(err)) {
+        const backendMessage =
+          err.response?.data?.message || "Error al eliminar el estudiante";
+
+        toast.error(backendMessage);
+      } else {
+        toast.error("Error inesperado");
+      }
     } finally {
       setLoading(false);
     }

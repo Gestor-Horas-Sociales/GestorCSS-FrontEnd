@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Upload, Download, Plus, Eye, Edit, Trash2 } from "lucide-react";
+import { Upload, Download, Plus, Trash2, FilePenLine } from "lucide-react";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
 import { useCarrera } from "@/hooks/use-carrera";
 import { useForm } from "react-hook-form";
@@ -191,18 +191,16 @@ export default function UsersPage() {
       header: "Acciones",
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" size="sm">
-            <Eye className="w-4 h-4" />
-          </Button>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
+            className="cursor-pointer"
             onClick={() =>
               editEstudiante(
                 row.original.id,
                 row.original.name,
                 row.original.lastname,
-                row.original.email,
+                row.original.email ?? "",
                 row.original.career_year,
                 row.original.student_id_card,
                 row.original.gender,
@@ -218,15 +216,15 @@ export default function UsersPage() {
               )
             }
           >
-            <Edit className="w-4 h-4" />
+            <FilePenLine />
           </Button>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="text-red-600"
+            className="text-red-600 cursor-pointer"
             onClick={() => openDialogDelete(row.original.id)}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 />
           </Button>
         </div>
       ),
@@ -510,7 +508,7 @@ export default function UsersPage() {
                         <FormTextField
                           formField={form}
                           nameField="email"
-                          label="Correo Electrónico"
+                          label="Correo Electrónico (Opcional)"
                           placeholder="Correo Electrónico"
                           type="email"
                           className="rounded-xl"

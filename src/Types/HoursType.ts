@@ -19,7 +19,7 @@ export type HoursRecordPayload = {
   student_id: number
   project_id: number
   date_register: string // Para el envío a la API (ISO string)
-  description: string
+  description?: string
   hours: number
   type_hours_id: number
   message?: string
@@ -30,7 +30,7 @@ export const HoursRecordSchema = z.object({
   student_id: z.number({ message: "El estudiante es requerido" }),
   project_id: z.number({ message: "El proyecto es requerido" }),
   date_register: z.date({ message: "La fecha es requerida" }), // El formulario valida un Date object
-  description: z.string().nonempty({ message: "La descripción es requerida" }),
+  description: z.string().optional(),
   hours: z.number().min(0, { message: "Las horas deben ser un número positivo" }),
   type_hours_id: z.number({ message: "El tipo de horas es requerido" }),
   student: z
