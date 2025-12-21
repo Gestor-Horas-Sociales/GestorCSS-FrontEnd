@@ -76,7 +76,7 @@ export default function UsersPage() {
       career_year: 1,
       student_id_card: "",
       gender: "",
-      active: false,
+      active: true,
       internal_hours: 0,
       external_hours: 0,
       career: {
@@ -439,7 +439,7 @@ export default function UsersPage() {
                   career_year: 1,
                   student_id_card: "",
                   gender: "",
-                  active: false,
+                  active: true,
                   internal_hours: 0,
                   external_hours: 0,
                   career: {
@@ -488,7 +488,7 @@ export default function UsersPage() {
                 career_year: 1,
                 student_id_card: "",
                 gender: "",
-                active: false,
+                active: true,
                 internal_hours: 0,
                 external_hours: 0,
                 career: {
