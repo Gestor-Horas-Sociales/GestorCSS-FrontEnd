@@ -1,4 +1,3 @@
-
 import type { ProjectType } from "../Types/ProyectType";
 // Asegúrate de importar el ProjectSchemaType inferido o el Schema de Zod
 import type { ProjectSchema } from "../Types/ProyectType";
@@ -7,7 +6,7 @@ import {
   createProject,
   updateProject,
   deleteProject,
-  getProjectById
+  getProjectById,
 } from "../api/projects";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
@@ -100,8 +99,8 @@ export const useProjects = () => {
         number_beneficiaries: Number(data.number_beneficiaries),
 
         // Manejo de opcionales numéricos
-        departament_id: data.departament_id
-          ? Number(data.departament_id)
+        department_id: data.department_id
+          ? Number(data.department_id)
           : undefined,
         district_id: data.district_id ? Number(data.district_id) : undefined,
 
