@@ -2,8 +2,7 @@
 
 import type {
   HoursRecordType,
-  HoursRecordSchema,
-  HoursRecordPayload,
+  HoursRecordSchema
 } from "@/Types/HoursType";
 import {
   getAllHoursRecord as fetchAllHoursRecord,
