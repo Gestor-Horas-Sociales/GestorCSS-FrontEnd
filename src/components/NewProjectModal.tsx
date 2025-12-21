@@ -1,34 +1,56 @@
-"use client"
+"use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { ProjectSchema, type ProjectType, type ProjectSchemaType } from "@/Types/ProyectType"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import FormTextField from "@/components/FormTextField"
-import FormSelectField from "@/components/FormSelectField"
-import { useDepartament } from "@/hooks/use-departament"
-import { useDistrict } from "@/hooks/use-district"
-import { useCarrera } from "@/hooks/use-carrera"
-import { useProjects } from "@/hooks/use-projects"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  ProjectSchema,
+  type ProjectType,
+  type ProjectSchemaType,
+} from "@/Types/ProyectType";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import FormTextField from "@/components/FormTextField";
+import FormSelectField from "@/components/FormSelectField";
+import { useDepartament } from "@/hooks/use-departament";
+import { useDistrict } from "@/hooks/use-district";
+import { useCarrera } from "@/hooks/use-carrera";
+import { useProjects } from "@/hooks/use-projects";
 // 1. Agregamos useCallback al import
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback } from "react";
 
 interface NewProyectoModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  projectToEdit?: ProjectType | null
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projectToEdit?: ProjectType | null;
 }
 
-export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit = null }: NewProyectoModalProps) {
-  const { departaments } = useDepartament()
-  const { districts, getAllDepartamentsByDistrict, departamentsDistrict } = useDistrict()
-  const { carreras } = useCarrera()
-  const { insertProject, getProjectDetails } = useProjects()
-  const [idDepartament, setIdDepartment] = useState<number>(0)
-  const [isEditing, setIsEditing] = useState(false)
+export default function NuevoProyectoModal({
+  open,
+  onOpenChange,
+  projectToEdit = null,
+}: NewProyectoModalProps) {
+  const { departaments } = useDepartament();
+  const { districts, getAllDepartamentsByDistrict, departamentsDistrict } =
+    useDistrict();
+  const { carreras } = useCarrera();
+  const { insertProject, getProjectDetails } = useProjects();
+  const [idDepartament, setIdDepartment] = useState<number>(0);
+  const [isEditing, setIsEditing] = useState(false);
 
   const form = useForm<ProjectSchemaType>({
     resolver: zodResolver(ProjectSchema),
@@ -43,14 +65,14 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
       req_gender: "",
       req_career: "0",
       number_beneficiaries: 1,
-      departament_id: 1,
+      department_id: 1,
       district_id: 1,
       start_date: new Date().toISOString().split("T")[0],
       end_date: new Date().toISOString().split("T")[0],
       active: true,
-      institution_ids: [1],
+      institution_id: 1,
     },
-  })
+  });
 
   // 2. Definimos resetForm ANTES del useEffect y con useCallback
   const resetForm = useCallback(() => {
@@ -65,130 +87,153 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
       req_gender: "",
       req_career: "0",
       number_beneficiaries: 1,
-      departament_id: 1,
+      department_id: 1,
       district_id: 1,
       start_date: new Date().toISOString().split("T")[0],
       end_date: new Date().toISOString().split("T")[0],
       active: true,
-      institution_ids: [1],
-    })
-    setIdDepartment(0)
-  }, [form])
+      institution_id: 1,
+    });
+    setIdDepartment(0);
+  }, [form]);
 
   // 3. Definimos loadProjectData ANTES del useEffect y con useCallback
-  const loadProjectData = useCallback(async (project: ProjectType) => {
-    // If we have an ID, get fresh data from the server
-    if (project.id) {
-      const freshProject = await getProjectDetails(project.id)
-      if (freshProject) {
-        project = freshProject
+  const loadProjectData = useCallback(
+    async (project: ProjectType) => {
+      // If we have an ID, get fresh data from the server
+      if (project.id) {
+        const freshProject = await getProjectDetails(project.id);
+        if (freshProject) {
+          project = freshProject;
+        }
       }
-    }
 
-    // Extract department and district IDs
-    let departmentId = 1
-    let districtId = 1
+      // Extract department and district IDs
+      let departmentId = 1;
+      let districtId = 1;
 
-    if (typeof project.district_id === "object" && project.district_id !== null) {
-      districtId = project.district_id.id
-      if ("departament" in project.district_id && project.district_id.departament) {
-        departmentId = project.district_id.departament.id
+      if (
+        typeof project.district_id === "object" &&
+        project.district_id !== null
+      ) {
+        districtId = project.district_id.id;
+        if (
+          "departament" in project.district_id &&
+          project.district_id.departament
+        ) {
+          departmentId = project.district_id.departament.id;
+        }
+      } else if (typeof project.district_id === "number") {
+        districtId = project.district_id;
+        // Find department based on district
+        const district = districts.find((d) => d.id === districtId);
+        if (district && typeof district.departament_id === "number") {
+          departmentId = district.departament_id;
+        }
       }
-    } else if (typeof project.district_id === "number") {
-      districtId = project.district_id
-      // Find department based on district
-      const district = districts.find((d) => d.id === districtId)
-      if (district && typeof district.departament_id === "number") {
-        departmentId = district.departament_id
+
+      // Extract career ID
+      let careerId = 0;
+      if (
+        typeof project.req_career === "object" &&
+        project.req_career !== null &&
+        "id" in project.req_career
+      ) {
+        careerId = project.req_career.id;
+      } else if (typeof project.req_career === "number") {
+        careerId = project.req_career;
+      } else if (typeof project.req_career === "string") {
+        const foundCareer = carreras.find((c) => c.name === project.req_career);
+        if (foundCareer) {
+          careerId = foundCareer.id;
+        } else {
+          console.warn(
+            `Carrera '${project.req_career}' no encontrada. Estableciendo a 0.`
+          );
+          careerId = 0;
+        }
       }
-    }
 
-    // Extract career ID
-    let careerId = 0
-    if (typeof project.req_career === "object" && project.req_career !== null && "id" in project.req_career) {
-      careerId = project.req_career.id
-    } else if (typeof project.req_career === "number") {
-      careerId = project.req_career
-    } else if (typeof project.req_career === "string") {
-      const foundCareer = carreras.find((c) => c.name === project.req_career)
-      if (foundCareer) {
-        careerId = foundCareer.id
-      } else {
-        console.warn(`Carrera '${project.req_career}' no encontrada. Estableciendo a 0.`)
-        careerId = 0
-      }
-    }
+      // Set department to load districts
+      setIdDepartment(departmentId);
 
-    // Set department to load districts
-    setIdDepartment(departmentId)
+      setTimeout(() => {
+        // Lógica segura para obtener el ID de la institución (número)
+        const instId = project.institution?.id || project.institution_id || 0;
 
-    // Wait for districts to load, then set form values
-    setTimeout(() => {
-      form.reset({
-        id: project.id,
-        name: project.name || "",
-        description: project.description || "",
-        social_impact: project.social_impact || "",
-        type_hours_id: project.type_hours_id || 1,
-        req_hours: project.req_hours || 1,
-        maximum_students: project.maximum_students || 1,
-        req_min_year: project.req_min_year || 1,
-        req_gender: project.req_gender || "",
-        req_career: careerId.toString(),
-        number_beneficiaries: project.number_beneficiaries || 1,
-        departament_id: departmentId,
-        district_id: districtId,
-        start_date:
-          typeof project.start_date === "string"
-            ? project.start_date.split("T")[0]
-            : new Date(project.start_date).toISOString().split("T")[0],
-        end_date:
-          typeof project.end_date === "string"
-            ? project.end_date.split("T")[0]
-            : new Date(project.end_date).toISOString().split("T")[0],
-        active: project.active ?? true,
-        institution_ids: Array.isArray(project.institution_ids) ? project.institution_ids : [project.institution_ids || 1],
-      })
-    }, 100)
-  }, [getProjectDetails, districts, carreras, form]) // Dependencias del useCallback
+        form.reset({
+          id: project.id,
+          name: project.name || "",
+          description: project.description || "",
+          social_impact: project.social_impact || "",
+          type_hours_id: project.type_hours_id || 1,
+          req_hours: project.req_hours || 1,
+          maximum_students: project.maximum_students || 1,
+          req_min_year: project.req_min_year || 1,
+          req_gender: project.req_gender || "",
+          req_career: careerId.toString(),
+          number_beneficiaries: project.number_beneficiaries || 1,
+          department_id: departmentId,
+          district_id: districtId,
+          start_date:
+            typeof project.start_date === "string"
+              ? project.start_date.split("T")[0]
+              : new Date(project.start_date).toISOString().split("T")[0],
+          end_date:
+            typeof project.end_date === "string"
+              ? project.end_date.split("T")[0]
+              : project.end_date
+              ? new Date(project.end_date).toISOString().split("T")[0]
+              : "",
+          active: project.active ?? true,
+
+          // CORRECCIÓN AQUÍ: Asignamos el número directo, sin corchetes []
+          institution_id: typeof instId === "number" ? instId : Number(instId),
+        });
+      }, 100);
+    },
+    [getProjectDetails, districts, carreras, form]
+  ); // Dependencias del useCallback
 
   // 4. Ahora el useEffect puede usar las funciones porque ya están declaradas
   useEffect(() => {
     if (projectToEdit && open) {
-      setIsEditing(true)
-      loadProjectData(projectToEdit)
+      setIsEditing(true);
+      loadProjectData(projectToEdit);
     } else if (open && !projectToEdit) {
-      setIsEditing(false)
-      resetForm()
+      setIsEditing(false);
+      resetForm();
     }
-  }, [projectToEdit, open, loadProjectData, resetForm])
+  }, [projectToEdit, open, loadProjectData, resetForm]);
 
   // Watch for department changes to load districts
   useEffect(() => {
     if (idDepartament > 0) {
-      getAllDepartamentsByDistrict(idDepartament)
+      getAllDepartamentsByDistrict(idDepartament);
     }
-  }, [idDepartament, getAllDepartamentsByDistrict])
+  }, [idDepartament, getAllDepartamentsByDistrict]);
 
   useEffect(() => {
     const subscription = form.watch((value) => {
-      if (value.departament_id && value.departament_id !== idDepartament) {
-        setIdDepartment(value.departament_id)
+      if (value.department_id && value.department_id !== idDepartament) {
+        setIdDepartment(value.department_id);
       }
-    })
-    return () => subscription.unsubscribe()
-  }, [form, idDepartament])
+    });
+    return () => subscription.unsubscribe();
+  }, [form, idDepartament]);
 
   const onSubmit = async (data: ProjectSchemaType) => {
-    await insertProject(data)
-    onOpenChange(false)
-  }
+    await insertProject(data);
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Editar Proyecto" : "Crear nuevo proyecto"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Editar Proyecto" : "Crear nuevo proyecto"}
+          </DialogTitle>
           <DialogDescription>
             {isEditing
               ? "Actualiza la información del proyecto"
@@ -197,7 +242,10 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6 p-4"
+          >
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Información Básica</h3>
@@ -315,7 +363,7 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
                 <div>
                   <FormSelectField
                     formField={form}
-                    nameField="departament_id"
+                    nameField="department_id"
                     label="Departamento"
                     placeholder="Seleccionar departamento"
                     valueType="number"
@@ -363,7 +411,12 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
                       <FormItem>
                         <FormLabel>Fecha de Inicio</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} min={new Date().toISOString().split("T")[0]} />
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value ?? ""}
+                            min={new Date().toISOString().split("T")[0]}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -378,7 +431,12 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
                       <FormItem>
                         <FormLabel>Fecha de Fin</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} min={new Date().toISOString().split("T")[0]} />
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value ?? ""}
+                            min={new Date().toISOString().split("T")[0]}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -402,14 +460,20 @@ export default function NuevoProyectoModal({ open, onOpenChange, projectToEdit =
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
                 Cancelar
               </Button>
-              <Button type="submit">{isEditing ? "Actualizar Proyecto" : "Crear Proyecto"}</Button>
+              <Button type="submit">
+                {isEditing ? "Actualizar Proyecto" : "Crear Proyecto"}
+              </Button>
             </div>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
