@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
@@ -105,7 +105,7 @@ export default function UsersPage() {
       active: boolean,
       internal_hours: number,
       external_hours: number,
-      career: { id: number; name: string } | null,
+      career: { id: number; name: string } | null
     ) => {
       setOpen(true);
       setActiveEdit(true);
@@ -391,6 +391,30 @@ export default function UsersPage() {
     e.target.value = "";
   };
 
+  const studentCard = form.watch("student_id_card");
+  const emailValue = form.watch("email");
+
+  const EMAIL_DOMAIN = "@uca.edu.sv";
+
+  useEffect(() => {
+    if (!studentCard) {
+      form.setValue("email", "", {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+      return;
+    }
+
+    const cleanCard = studentCard.replace(/\D/g, "");
+
+    if (!emailValue || emailValue.endsWith(EMAIL_DOMAIN)) {
+      form.setValue("email", `${cleanCard}${EMAIL_DOMAIN}`, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  }, [studentCard]);
+
   return (
     <>
       {loading && <Spinner />}
@@ -406,7 +430,24 @@ export default function UsersPage() {
           <div className="flex flex-col gap-4">
             <Button
               className="rounded-xl px-6 py-2 shadow"
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                setOpen(true);
+                form.reset({
+                  name: "",
+                  lastname: "",
+                  email: "",
+                  career_year: 1,
+                  student_id_card: "",
+                  gender: "",
+                  active: false,
+                  internal_hours: 0,
+                  external_hours: 0,
+                  career: {
+                    career_id: 1,
+                    career_name: "",
+                  },
+                });
+              }}
             >
               <Plus className="w-4 h-4 mr-2" />
               Nuevo Usuario
@@ -502,6 +543,7 @@ export default function UsersPage() {
                           formField={form}
                           nameField="student_id_card"
                           label="Carnet de Estudiante"
+                          type="text"
                           placeholder="Carnet de Estudiante"
                           className="rounded-xl"
                         />
