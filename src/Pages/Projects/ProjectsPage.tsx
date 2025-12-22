@@ -19,7 +19,7 @@ import {
   Trash2,
   CalendarIcon,
   GraduationCap,
-  UserCog, // <--- NUEVO ICONO
+  UserCog,
 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ProjectSchema, type ProjectType } from "@/Types/ProyectType";
@@ -57,8 +57,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// --- IMPORTACIÓN DEL NUEVO MODAL ---
 import AssignmentModal from "@/components/ExtraComponents/AssignmentModal";
+import SearchableSelect from "@/components/SearchableSelect";
 
 export default function ProjectsPage() {
   const {
@@ -77,7 +77,6 @@ export default function ProjectsPage() {
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
   const [idDelete, setIdDelete] = useState<number>(0);
 
-  // --- ESTADOS PARA EL MODAL DE ESTUDIANTES ---
   const [openAssignmentModal, setOpenAssignmentModal] = useState(false);
   const [selectedProjectForAssignment, setSelectedProjectForAssignment] =
     useState<{ id: number; name: string } | null>(null);
@@ -128,7 +127,6 @@ export default function ProjectsPage() {
     return () => subscription.unsubscribe();
   }, [form]);
 
-  // --- LÓGICA DE ENVÍO ---
   const handleFormSubmit = (data: z.infer<typeof ProjectSchema>) => {
     insertProject({
       ...data,
@@ -142,7 +140,6 @@ export default function ProjectsPage() {
     setIdDelete(id);
   }, []);
 
-  // --- HANDLER PARA ABRIR MODAL DE ESTUDIANTES ---
   const handleOpenAssignments = useCallback((project: ProjectType) => {
     if (project.id) {
       setSelectedProjectForAssignment({ id: project.id, name: project.name });
@@ -150,7 +147,6 @@ export default function ProjectsPage() {
     }
   }, []);
 
-  // --- LÓGICA DE EDICIÓN ---
   const editProject = useCallback(
     async (id: number) => {
       setOpen(true);
@@ -232,7 +228,6 @@ export default function ProjectsPage() {
     [form, setOpen, setActiveEdit, getProjectDetails, districts, carreras]
   );
 
-  // --- DEFINICIÓN DE COLUMNAS ---
   const columns: ColumnDef<ProjectType>[] = useMemo(
     () => [
       {
@@ -380,7 +375,6 @@ export default function ProjectsPage() {
         header: "",
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            {/* --- BOTÓN PARA ABRIR EL MODAL DE ESTUDIANTES --- */}
             <Button
               variant="ghost"
               size="sm"
@@ -419,7 +413,7 @@ export default function ProjectsPage() {
       editProject,
       loadingProject,
       openDialogDelete,
-      handleOpenAssignments, // Dependencia agregada
+      handleOpenAssignments,
     ]
   );
 
@@ -512,15 +506,30 @@ export default function ProjectsPage() {
                           </div>
 
                           <div className="md:col-span-2">
-                            <FormSelectField
-                              formField={form}
-                              nameField="institution_id"
-                              label="Institución Responsable"
-                              placeholder="Seleccionar institución..."
-                              listRender={institutions.map((inst) => ({
-                                key: inst.id.toString(),
-                                textRender: inst.name,
-                              }))}
+                            <FormField
+                              control={form.control}
+                              name="institution_id"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Institución Responsable</FormLabel>
+                                  <FormControl>
+                                    <SearchableSelect
+                                      options={institutions.map((inst) => ({
+                                        label: inst.name,
+                                        value: inst.id,
+                                      }))}
+                                      value={field.value || 0}
+                                      onChange={(value) =>
+                                        field.onChange(Number(value))
+                                      }
+                                      placeholder="Seleccionar institución..."
+                                      searchPlaceholder="Buscar institución..."
+                                      emptyMessage="No se encontró ninguna institución"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
                           </div>
 
@@ -618,15 +627,30 @@ export default function ProjectsPage() {
                           />
                         </div>
                         <div className="md:col-span-3">
-                          <FormSelectField
-                            formField={form}
-                            nameField="req_career"
-                            label="Carrera"
-                            placeholder="Seleccionar..."
-                            listRender={carreras.map((c) => ({
-                              key: c.id.toString(),
-                              textRender: c.name,
-                            }))}
+                          <FormField
+                            control={form.control}
+                            name="req_career"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Carrera</FormLabel>
+                                <FormControl>
+                                  <SearchableSelect
+                                    options={carreras.map((c) => ({
+                                      label: c.name,
+                                      value: c.id,
+                                    }))}
+                                    value={field.value || "0"}
+                                    onChange={(value) =>
+                                      field.onChange(value.toString())
+                                    }
+                                    placeholder="Seleccionar carrera..."
+                                    searchPlaceholder="Buscar carrera..."
+                                    emptyMessage="No se encontró ninguna carrera"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
                         </div>
                       </div>
@@ -854,7 +878,6 @@ export default function ProjectsPage() {
         confirmText="Eliminar"
       />
 
-      {/* --- INTEGRACIÓN DEL MODAL AL FINAL --- */}
       {selectedProjectForAssignment && (
         <AssignmentModal
           isOpen={openAssignmentModal}

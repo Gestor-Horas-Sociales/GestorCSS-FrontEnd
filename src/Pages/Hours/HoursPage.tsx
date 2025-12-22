@@ -28,13 +28,15 @@ import {
 } from "@/components/ui/form";
 import FormTextField from "@/components/FormTextField";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
-import FormSelectField from "@/components/FormSelectField";
+import FormSelectField from "@/components/FormSelectField"; // Mantener para el select simple de Tipo de Horas
 import type { z } from "zod";
 import GeneralAlert from "@/components/GeneralAlert";
 import { Badge } from "@/components/ui/badge";
 import { useProjects } from "@/hooks/use-projects";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+// 1. IMPORTAR EL NUEVO COMPONENTE
+import SearchableSelect from "@/components/SearchableSelect";
 
 export default function HoursPage() {
   const {
@@ -54,16 +56,17 @@ export default function HoursPage() {
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
   const [idDelete, setIdDelete] = useState<number>(0);
 
-  // Referencia para el input de fecha
   const dateRegisterInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<z.infer<typeof HoursRecordSchema>>({
     resolver: zodResolver(HoursRecordSchema),
     defaultValues: {
       id: undefined,
-      date_register: new Date(), // Establecer la fecha actual como valor por defecto
+      date_register: new Date(),
       description: "",
       hours: 0,
+      student_id: 0,
+      project_id: 0,
     },
   });
 
@@ -79,9 +82,18 @@ export default function HoursPage() {
     );
   }, [projects, selectedStudentId]);
 
+  // Efecto para resetear el proyecto si cambia el estudiante
   useEffect(() => {
-    form.setValue("project_id", 0);
-  }, [selectedStudentId, form]);
+    // Solo reseteamos si el proyecto seleccionado actual NO está en la lista filtrada
+    // Esto evita reseteos innecesarios al abrir el modal de edición
+    const currentProject = form.getValues("project_id");
+    if (currentProject !== 0) {
+      const isValid = filteredProjects.some((p) => p.id === currentProject);
+      if (!isValid) {
+        form.setValue("project_id", 0);
+      }
+    }
+  }, [selectedStudentId, filteredProjects, form]);
 
   const openDialogDelete = useCallback((id: number) => {
     setOpenAlertDelete(true);
@@ -100,15 +112,18 @@ export default function HoursPage() {
     ) => {
       setOpen(true);
       setActiveEdit(true);
-      form.reset({
-        id,
-        student_id,
-        project_id,
-        date_register: new Date(date_register), // Asegurarse de que sea un objeto Date
-        description,
-        hours,
-        type_hours_id,
-      });
+      // Usamos un timeout mínimo para asegurar que el formulario se renderice antes de resetear
+      setTimeout(() => {
+        form.reset({
+          id,
+          student_id,
+          project_id,
+          date_register: new Date(date_register),
+          description,
+          hours,
+          type_hours_id,
+        });
+      }, 0);
     },
     [form, setOpen, setActiveEdit]
   );
@@ -117,9 +132,7 @@ export default function HoursPage() {
     {
       accessorKey: "id",
       header: "ID",
-      meta: {
-        label: "ID",
-      },
+      meta: { label: "ID" },
     },
     {
       accessorKey: "student",
@@ -157,15 +170,12 @@ export default function HoursPage() {
     {
       accessorKey: "hours",
       header: "Horas",
-      cell: ({ row }) => {
-        const hours = row.original.hours;
-        return (
-          <div className="text-center">
-            <div className="text-lg font-bold">{hours}</div>
-            <div className="text-xs text-muted-foreground">horas</div>
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <div className="text-center">
+          <div className="text-lg font-bold">{row.original.hours}</div>
+          <div className="text-xs text-muted-foreground">horas</div>
+        </div>
+      ),
     },
     {
       accessorKey: "date_register",
@@ -182,49 +192,45 @@ export default function HoursPage() {
     {
       accessorKey: "type_hours_id",
       header: "Tipo de Horas",
-      cell: ({ row }) => {
-        const typeHours = row.original.type_hours_id;
-        return (
-          <Badge variant={typeHours === 1 ? "default" : "secondary"}>
-            {typeHours === 1 ? "Internas" : "Externas"}
-          </Badge>
-        );
-      },
+      cell: ({ row }) => (
+        <Badge
+          variant={row.original.type_hours_id === 1 ? "default" : "secondary"}
+        >
+          {row.original.type_hours_id === 1 ? "Internas" : "Externas"}
+        </Badge>
+      ),
     },
     {
       id: "actions",
       header: "Acciones",
-      cell: ({ row }) => {
-        const registro = row.original;
-        return (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              className="cursor-pointer bg-transparent"
-              onClick={() =>
-                editHoursRecord(
-                  registro.id,
-                  registro.student_id,
-                  registro.project_id,
-                  registro.date_register,
-                  registro.description,
-                  registro.hours,
-                  registro.type_hours_id
-                )
-              }
-            >
-              <Edit className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="cursor-pointer bg-transparent"
-              onClick={() => openDialogDelete(registro.id)}
-            >
-              <XCircle className="w-4 h-4 text-red-600" />
-            </Button>
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="cursor-pointer bg-transparent"
+            onClick={() =>
+              editHoursRecord(
+                row.original.id,
+                row.original.student_id,
+                row.original.project_id,
+                row.original.date_register,
+                row.original.description,
+                row.original.hours,
+                row.original.type_hours_id
+              )
+            }
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="cursor-pointer bg-transparent"
+            onClick={() => openDialogDelete(row.original.id)}
+          >
+            <XCircle className="w-4 h-4 text-red-600" />
+          </Button>
+        </div>
+      ),
     },
   ];
 
@@ -243,6 +249,25 @@ export default function HoursPage() {
     setOpenAlertDelete(false);
     setIdDelete(0);
   };
+
+  // Preparar opciones para el componente SearchableSelect
+  const studentOptions = useMemo(
+    () =>
+      estudiantes.map((est) => ({
+        label: `${est.student_id_card} - ${est.name} ${est.lastname}`,
+        value: est.id,
+      })),
+    [estudiantes]
+  );
+
+  const projectOptions = useMemo(
+    () =>
+      filteredProjects.map((proj) => ({
+        label: proj.name,
+        value: proj.id,
+      })),
+    [filteredProjects]
+  );
 
   return (
     <>
@@ -264,7 +289,7 @@ export default function HoursPage() {
               form.reset({
                 student_id: 0,
                 project_id: 0,
-                date_register: new Date(), // Resetear a la fecha actual para nuevos registros
+                date_register: new Date(),
                 description: "",
                 hours: 0,
                 type_hours_id: 0,
@@ -282,162 +307,171 @@ export default function HoursPage() {
             setOpen(isOpen);
             if (!isOpen) {
               setActiveEdit(false);
-              form.reset({
-                student_id: 0,
-                project_id: 0,
-                date_register: new Date(), // Resetear a la fecha actual al cerrar
-                description: "",
-                hours: 0,
-                type_hours_id: 0,
-              });
+              form.reset(); // Limpieza completa al cerrar
             }
           }}
         >
-          <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
+          <DialogContent className="max-w-2xl w-[95vw] sm:w-full overflow-y-visible">
+            {/* NOTA: overflow-y-visible es clave para que el Popover no se corte si sale del Dialog, aunque SearchableSelect lo maneja internamente */}
             <DialogHeader>
               <DialogTitle>
-                {activeEdit
-                  ? "Editar Registro de Horas"
-                  : "Nuevo Registro de Horas"}
+                {activeEdit ? "Editar Registro" : "Nuevo Registro"}
               </DialogTitle>
               <DialogDescription>
-                {activeEdit
-                  ? "Editar los detalles del registro de horas."
-                  : "Ingrese los detalles del nuevo registro de horas."}
+                Complete los detalles del registro de horas.
               </DialogDescription>
             </DialogHeader>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(insertHoursRecord)}>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="flex flex-col">
-                      <FormSelectField
-                        formField={form}
-                        nameField="student_id"
-                        label="Estudiante"
-                        placeholder="Seleccione estudiante"
-                        listRender={estudiantes.map((estudiante) => ({
-                          key: estudiante.id.toString(),
-                          textRender: `${estudiante.name} ${estudiante.lastname} - ${estudiante.student_id_card}`,
-                        }))}
-                        className="min-w-0"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <FormSelectField
-                        formField={form}
-                        nameField="project_id"
-                        label="Proyecto"
-                        placeholder={
-                          !selectedStudentId
-                            ? "Seleccione primero un estudiante"
-                            : filteredProjects.length === 0
-                            ? "Este estudiante no tiene proyectos"
-                            : "Seleccione proyecto"
-                        }
-                        listRender={filteredProjects.map((project) => ({
-                          key: project.id.toString(),
-                          textRender: project.name,
-                        }))}
-                        disabled={!selectedStudentId || selectedStudentId === 0}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="flex flex-col">
-                      <FormTextField
-                        formField={form}
-                        nameField="hours"
-                        label="Horas"
-                        placeholder="Ingrese cantidad de horas"
-                        type="number"
-                        className="min-w-0"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <FormSelectField
-                        formField={form}
-                        nameField="type_hours_id"
-                        label="Tipo de Horas"
-                        placeholder="Seleccione tipo"
-                        listRender={[
-                          { key: "1", textRender: "Internas" },
-                          { key: "2", textRender: "Externas" },
-                        ]}
-                        className="min-w-0"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-col">
-                    <FormField
-                      control={form.control}
-                      name="date_register"
-                      render={({ field }) => {
-                        // Asegurarse de que field.value sea un objeto Date válido
-                        const dateValue =
-                          field.value instanceof Date &&
-                          !isNaN(field.value.getTime())
-                            ? field.value
-                            : new Date(); // Usar la fecha actual si no es válida
+              <form
+                onSubmit={form.handleSubmit(insertHoursRecord)}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {/* CAMPO ESTUDIANTE CON FILTRO */}
+                  <FormField
+                    control={form.control}
+                    name="student_id"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Estudiante</FormLabel>
+                        <FormControl>
+                          <SearchableSelect
+                            options={studentOptions}
+                            value={field.value}
+                            onChange={(val) => field.onChange(Number(val))}
+                            placeholder="Buscar estudiante..."
+                            searchPlaceholder="Filtrar por nombre o carnet..."
+                            emptyMessage="No se encontraron estudiantes."
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                        return (
-                          <FormItem>
-                            <FormLabel
-                              htmlFor="input-date-register"
-                              className={cn(
-                                form.formState.errors.date_register
-                                  ? "text-red-600"
-                                  : "dark:text-secondary"
-                              )}
-                            >
-                              Fecha
-                            </FormLabel>
-                            <FormControl>
-                              <div className="relative dark:border-primary-dark">
-                                <Input
-                                  type="date"
-                                  id="input-date-register"
-                                  ref={dateRegisterInputRef}
-                                  className="w-full focus-visible:ring-primary dark:border-primary-dark"
-                                  value={dateValue.toISOString().split("T")[0]} // Formato YYYY-MM-DD para input type="date"
-                                  onChange={(e) => {
-                                    const selectedDate = new Date(
-                                      e.target.value
-                                    );
-                                    field.onChange(selectedDate); // Guardar como Date object en el formulario
-                                  }}
-                                />
-                                <span
-                                  className="absolute right-3 top-1/2 transform -translate-y-1/2 dark:text-white cursor-pointer"
-                                  onClick={() =>
-                                    dateRegisterInputRef.current?.showPicker()
-                                  }
-                                >
-                                  <CalendarIcon className="h-5 w-5" />
-                                </span>
-                              </div>
-                            </FormControl>
-                            <FormMessage className="text-red-600" />
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </div>
+                  {/* CAMPO PROYECTO CON FILTRO */}
+                  <FormField
+                    control={form.control}
+                    name="project_id"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Proyecto</FormLabel>
+                        <FormControl>
+                          <SearchableSelect
+                            options={projectOptions}
+                            value={field.value}
+                            onChange={(val) => field.onChange(Number(val))}
+                            placeholder={
+                              !selectedStudentId
+                                ? "Seleccione estudiante primero"
+                                : "Seleccionar proyecto..."
+                            }
+                            searchPlaceholder="Buscar proyecto..."
+                            emptyMessage={
+                              !selectedStudentId
+                                ? "Seleccione un estudiante."
+                                : "Este estudiante no tiene proyectos asignados."
+                            }
+                            disabled={!selectedStudentId}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="flex flex-col">
                     <FormTextField
                       formField={form}
-                      nameField="description"
-                      label="Descripción"
-                      placeholder="Ingrese descripción de las actividades"
-                      isTextArea={true}
-                      rows={3}
+                      nameField="hours"
+                      label="Horas"
+                      placeholder="Cantidad"
+                      type="number"
+                      className="min-w-0"
+                    />
+                  </div>
+
+                  {/* TIPO DE HORAS (SELECT SIMPLE ESTÁ BIEN AQUÍ PORQUE SON POCAS OPCIONES) */}
+                  <div className="flex flex-col">
+                    <FormSelectField
+                      formField={form}
+                      nameField="type_hours_id"
+                      label="Tipo de Horas"
+                      placeholder="Seleccione tipo"
+                      valueType="number"
+                      listRender={[
+                        { key: "1", textRender: "Internas" },
+                        { key: "2", textRender: "Externas" },
+                      ]}
                       className="min-w-0"
                     />
                   </div>
                 </div>
-                <div className="w-full flex justify-center">
-                  <Button type="submit" className="mt-4 w-full sm:w-auto">
+
+                <div className="flex flex-col">
+                  <FormField
+                    control={form.control}
+                    name="date_register"
+                    render={({ field }) => {
+                      const dateValue =
+                        field.value instanceof Date &&
+                        !isNaN(field.value.getTime())
+                          ? field.value
+                          : new Date();
+
+                      return (
+                        <FormItem>
+                          <FormLabel
+                            className={cn(
+                              form.formState.errors.date_register
+                                ? "text-red-600"
+                                : ""
+                            )}
+                          >
+                            Fecha
+                          </FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                type="date"
+                                ref={dateRegisterInputRef}
+                                className="w-full"
+                                value={dateValue.toISOString().split("T")[0]}
+                                onChange={(e) =>
+                                  field.onChange(new Date(e.target.value))
+                                }
+                              />
+                              <CalendarIcon
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground cursor-pointer"
+                                onClick={() =>
+                                  dateRegisterInputRef.current?.showPicker()
+                                }
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <FormTextField
+                    formField={form}
+                    nameField="description"
+                    label="Descripción"
+                    placeholder="Detalles de la actividad realizada..."
+                    isTextArea={true}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="w-full flex justify-end pt-4">
+                  <Button type="submit" className="w-full sm:w-auto">
                     {activeEdit ? "Actualizar Registro" : "Registrar Horas"}
                   </Button>
                 </div>
@@ -454,13 +488,13 @@ export default function HoursPage() {
         />
       </div>
       <GeneralAlert
-        title="¿Estás seguro de eliminar este registro de horas?"
-        description="Esta acción no se puede deshacer."
+        title="¿Eliminar registro?"
+        description="Esta acción es irreversible."
         openAlert={openAlertDelete}
         setOpenAlert={setOpenAlertDelete}
-        confirmText="Confirmar"
-        onConfirm={() => confirmDelete()}
-        onCancel={() => cancelDelete()}
+        confirmText="Eliminar"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
       />
       <Toaster position="top-right" />
     </>
