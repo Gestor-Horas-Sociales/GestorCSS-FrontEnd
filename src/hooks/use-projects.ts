@@ -96,6 +96,7 @@ export const useProjects = () => {
 
         number_beneficiaries: Number(data.number_beneficiaries),
 
+
         department_id: data.department_id
           ? Number(data.department_id)
           : undefined,
