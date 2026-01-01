@@ -4,23 +4,25 @@ import type {
   ProjectSchemaType,
 } from "@/Types/ProyectType";
 
-// Obtener todos: Retorna la estructura completa (lectura)
+// 1. OBTENER TODOS
+// Usamos el genérico <{ data: ProjectType[] }> para mayor seguridad
 export const getProjects = async () => {
-  const response = await api.get("/projects");
-  return response.data.data as ProjectType[];
+  const response = await api.get<{ data: ProjectType[] }>("/projects");
+  return response.data.data;
 };
 
-// Obtener por ID: Recibe number, retorna estructura completa
+// 2. OBTENER POR ID
 export const getProjectById = async (id: number) => {
   const response = await api.get<{ data: ProjectType }>(`/projects/${id}`);
   return response.data.data;
 };
 
-// Crear: Usa el Schema del formulario (asegura que institution_ids vaya incluido)
+// 3. CREAR
+// Nota: El Schema ya valida que institution_id (singular) vaya incluido
 export const createProject = (data: ProjectSchemaType) =>
   api.post<{ data: ProjectType; message: string }>("/projects", data);
 
-// Actualizar: Recibe ID number y parcial del Schema
+// 4. ACTUALIZAR
 export const updateProject = (id: number, data: Partial<ProjectSchemaType>) => {
   return api.patch<{ data: ProjectType; message: string }>(
     `/projects/${id}`,
@@ -28,6 +30,6 @@ export const updateProject = (id: number, data: Partial<ProjectSchemaType>) => {
   );
 };
 
-// Eliminar: Recibe number
+// 5. ELIMINAR
 export const deleteProject = (id: number) =>
   api.delete<{ message: string }>(`/projects/${id}`);

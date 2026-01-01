@@ -128,10 +128,12 @@ export default function ProjectsPage() {
   }, [form]);
 
   const handleFormSubmit = (data: z.infer<typeof ProjectSchema>) => {
+    const { department_id, ...dataToSend } = data;
+
     insertProject({
-      ...data,
-      description: data.description || "",
-      end_date: data.end_date || null,
+      ...dataToSend,
+      description: dataToSend.description || "",
+      end_date: dataToSend.end_date || null,
     });
   };
 

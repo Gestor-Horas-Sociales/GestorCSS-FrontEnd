@@ -5,8 +5,10 @@ import type { District } from "./DistrictType";
 import type { InstitutionType } from "./InstitutionType";
 
 // ==========================================
-// SCHEMAS (Para Validación y Escritura)
+// SCHEMAS (Para Validación de Formularios)
 // ==========================================
+// Nota: Dejamos req_career aquí porque tu formulario de "Crear" 
+// seguramente todavía envía ese campo. 
 
 export const ProjectSchema = z.object({
   id: z.number().optional(),
@@ -30,12 +32,15 @@ export const ProjectSchema = z.object({
     .int()
     .min(1, { message: "Año mínimo debe ser al menos 1" }),
   req_gender: z.string().min(1, { message: "Género requerido" }),
+  
+  // Este es el campo manual (String) para el formulario
   req_career: z.coerce.string().min(1, { message: "Carrera es requerida" }),
+  
   number_beneficiaries: z.coerce
     .number()
     .int()
     .min(0, { message: "Número de beneficiarios inválido" }),
-  department_id: z.coerce.number().int().optional(),
+  department_id: z.number().int().optional(),
   district_id: z.coerce.number().int().optional().nullable(),
   start_date: z.string().min(1, { message: "Fecha de inicio es requerida" }),
   end_date: z.string().optional().nullable(),
@@ -47,7 +52,7 @@ export const ProjectSchema = z.object({
   message: z.string().optional(),
 });
 
-// Inferencia del tipo
+// Inferencia del tipo para formularios
 export type ProjectSchemaType = z.infer<typeof ProjectSchema>;
 
 // ==========================================
@@ -67,7 +72,13 @@ export interface ProjectType {
   maximum_students: number;
   req_min_year: number;
   req_gender: string;
-  req_career: string | CareerType;
+  
+  // Campo Legacy (Manual)
+  req_career: string | CareerType; 
+  
+  // --- NUEVO: Array real de carreras (Desde la BD) ---
+  careers?: CareerType[]; 
+
   number_beneficiaries: number;
   department_id?: number | DepartamentoType;
   district_id?: number | District | null;

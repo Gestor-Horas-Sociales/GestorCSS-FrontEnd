@@ -1,6 +1,4 @@
-import type { ProjectType } from "../Types/ProyectType";
-// Asegúrate de importar el ProjectSchemaType inferido o el Schema de Zod
-import type { ProjectSchema } from "../Types/ProyectType";
+import type { ProjectType, ProjectSchemaType } from "../Types/ProyectType";
 import {
   getProjects,
   createProject,
@@ -10,7 +8,6 @@ import {
 } from "../api/projects";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import type { z } from "zod";
 import type { AxiosError } from "axios";
 
 export const useProjects = () => {
@@ -47,7 +44,6 @@ export const useProjects = () => {
     setLoading(true);
     try {
       const response = await deleteProject(id);
-      // Usamos optional chaining por si el mensaje no viene
       toast.success(
         response.data?.message || "Proyecto eliminado correctamente"
       );
@@ -77,28 +73,29 @@ export const useProjects = () => {
     }
   };
 
-  const insertProject = async (data: z.infer<typeof ProjectSchema>) => {
+  // Usamos el tipo ProjectSchemaType que definimos en el archivo de tipos
+  const insertProject = async (data: ProjectSchemaType) => {
     setLoading(true);
     try {
       // Construir el payload
-      // Usamos ?.trim() || "" para evitar crash si el campo es undefined
       const apiPayload = {
         name: data.name.trim(),
         description: data.description?.trim() || "",
         social_impact: data.social_impact?.trim() || "",
 
-        // Zod.coerce ya convirtió esto, pero Number() es doble seguridad (está bien)
         type_hours_id: Number(data.type_hours_id),
         req_hours: Number(data.req_hours),
         maximum_students: Number(data.maximum_students),
         req_min_year: Number(data.req_min_year),
 
         req_gender: data.req_gender,
+
+        // Mantenemos req_career como string por ahora para cumplir con el formulario actual.
+        // (Aunque el backend ya soporta múltiples, el formulario envía uno solo)
         req_career: data.req_career,
 
         number_beneficiaries: Number(data.number_beneficiaries),
 
-        // Manejo de opcionales numéricos
         department_id: data.department_id
           ? Number(data.department_id)
           : undefined,
@@ -109,20 +106,17 @@ export const useProjects = () => {
 
         active: Boolean(data.active),
 
-        // --- CAMBIO: Singular y obligatorio ---
         institution_id: Number(data.institution_id),
       };
 
-      // Validaciones extra (aunque Zod ya cubre la mayoría)
       if (!apiPayload.institution_id) {
         toast.error("Debe seleccionar una institución");
         setLoading(false);
         return;
       }
 
-      // Validar fechas (solo si existe fecha fin)
+      // Validar fechas
       const startDate = new Date(apiPayload.start_date);
-
       if (apiPayload.end_date) {
         const endDate = new Date(apiPayload.end_date);
         if (endDate <= startDate) {
@@ -162,7 +156,6 @@ export const useProjects = () => {
     }
   };
 
-  // Cargar proyectos al montar el hook
   useEffect(() => {
     getAllProjects();
   }, [getAllProjects]);

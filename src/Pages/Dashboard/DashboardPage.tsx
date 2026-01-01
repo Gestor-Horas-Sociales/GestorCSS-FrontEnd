@@ -1,3 +1,4 @@
+import { useMemo } from "react"; // <--- Importamos useMemo
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, BookOpen, Clock, Calendar, Target } from "lucide-react";
@@ -24,113 +25,163 @@ export default function DashboardPage() {
   const { estudiantes } = useEstudiantes();
   const { projects } = useProjects();
   const { hours } = useHoursRecord();
-  const { carreras } = useCarrera(); // Catálogo de carreras (Ing. Civil, etc.)
-  const { departaments } = useDepartament(); // Catálogo geográfico (San Salvador, etc.)
+  const { carreras } = useCarrera();
+  const { departaments } = useDepartament();
 
-  const activeStudents = estudiantes?.filter((s) => s.active === true) || [];
+  // --- 2. CÁLCULOS MEMORIZADOS (Optimizacion) ---
 
-  // Proyectos Activos
-  const activeProyects = projects?.filter((p) => p.active === true) || [];
+  const activeStudents = useMemo(
+    () => estudiantes?.filter((s) => s.active === true) || [],
+    [estudiantes]
+  );
 
-  // Total Beneficiarios (Corregido: Agregado valor inicial 0 y validación de array)
-  const totalBeneficiarios =
-    projects?.reduce((acc, project) => {
-      return acc + (Number(project.number_beneficiaries) || 0);
-    }, 0) || 0;
+  const activeProyects = useMemo(
+    () => projects?.filter((p) => p.active === true) || [],
+    [projects]
+  );
+
+  // Total Beneficiarios
+  const totalBeneficiarios = useMemo(
+    () =>
+      projects?.reduce((acc, project) => {
+        return acc + (Number(project.number_beneficiaries) || 0);
+      }, 0) || 0,
+    [projects]
+  );
 
   // Horas Totales
-  const totalHorasCompletadas =
-    hours?.reduce((acc, record) => {
-      return acc + (Number(record.hours) || 0);
-    }, 0) || 0;
+  const totalHorasCompletadas = useMemo(
+    () =>
+      hours?.reduce((acc, record) => {
+        return acc + (Number(record.hours) || 0);
+      }, 0) || 0,
+    [hours]
+  );
 
   // Horas Internas (Tipo 1)
-  const totalHorasInternas =
-    hours
-      ?.filter((record) => record.type_hours_id === 1)
-      .reduce((acc, record) => acc + (Number(record.hours) || 0), 0) || 0;
+  const totalHorasInternas = useMemo(
+    () =>
+      hours
+        ?.filter((record) => record.type_hours_id === 1)
+        .reduce((acc, record) => acc + (Number(record.hours) || 0), 0) || 0,
+    [hours]
+  );
 
   // Horas Externas (Tipo 2)
-  const totalHorasExternas =
-    hours
-      ?.filter((record) => record.type_hours_id === 2)
-      .reduce((acc, record) => acc + (Number(record.hours) || 0), 0) || 0;
+  const totalHorasExternas = useMemo(
+    () =>
+      hours
+        ?.filter((record) => record.type_hours_id === 2)
+        .reduce((acc, record) => acc + (Number(record.hours) || 0), 0) || 0,
+    [hours]
+  );
 
   // --- 3. CÁLCULOS COMPLEJOS (Cruces de datos) ---
 
-  // A. Proyectos por Carrera (Dinámico)
-  const dataProyectosPorCarrera =
-    carreras?.map((carrera) => {
-      // 1. Filtramos proyectos de esta carrera
+  // A. Proyectos por Carrera (LÓGICA CORREGIDA PARA TU JSON ACTUAL)
+  const dataProyectosPorCarrera = useMemo(() => {
+    return carreras?.map((carrera) => {
       const proyectosDeCarrera =
-        projects?.filter((p) => p.req_career === carrera.id.toString()) || [];
+        projects?.filter((p) => {
+          // Normalizamos los IDs a String para comparar sin miedo ("13" vs 13)
+          const idCarreraContext = String(carrera.id);
+          const idRequeridoProyecto = p.req_career ? String(p.req_career) : null;
 
-      // 2. Filtramos estudiantes de esta carrera
-      const estudiantesDeCarrera =
-        estudiantes?.filter((e) => e.career?.id === carrera.id) || [];
+          // 1. Verificamos la relación antigua (Legacy)
+          const esLegacy = idRequeridoProyecto === idCarreraContext;
+
+          // 2. Verificamos si el proyecto es "Universal" (req_career es "0")
+          // Esto hará que el proyecto cuente para TODAS las carreras
+          const esUniversal = idRequeridoProyecto === "0";
+
+          // 3. Verificamos la nueva relación (Muchos a Muchos)
+          // Usamos "?.some" protegiendo por si careers es undefined
+          // Nota: any se usa temporalmente porque tu backend no manda la estructura tipada aún
+          const tieneLaCarrera = p.careers?.some(
+            (c: any) => String(c.id) === idCarreraContext
+          );
+
+          // Si CUALQUIERA de las 3 condiciones se cumple, lo contamos
+          return esLegacy || esUniversal || tieneLaCarrera;
+        }) || [];
 
       return {
-        departamento: carrera.name, // Usamos 'name' de la carrera como etiqueta
+        departamento: carrera.name,
         proyectos: proyectosDeCarrera.length,
-        estudiantes: estudiantesDeCarrera.length,
+        estudiantes:
+          estudiantes?.filter((e) => e.career?.id === carrera.id).length || 0,
       };
     }) || [];
+  }, [carreras, projects, estudiantes]);
 
-  // B. Proyectos por Departamento Geográfico (Dinámico)
-  const dataProyectosPorDepto =
-    departaments?.map((depto) => {
-      // 1. Filtramos proyectos en este departamento geográfico
-      const proyectosEnDepto =
-        projects?.filter((p) => p.district_id === depto.id) || [];
+  // B. Proyectos por Departamento Geográfico (MEMORIZADO)
+  const dataProyectosPorDepto = useMemo(() => {
+    return (
+      departaments?.map((depto) => {
+        const proyectosEnDepto =
+          projects?.filter((p) => p.district_id === depto.id) || [];
 
-      // 2. Sumamos estudiantes asignados a esos proyectos (Si tienes ese dato en el proyecto)
-      const estudiantesEnDepto = proyectosEnDepto.reduce(
-        (acc, p) => acc + (Number(p.maximum_students) || 0),
-        0
-      );
+        const estudiantesEnDepto = proyectosEnDepto.reduce(
+          (acc, p) => acc + (Number(p.maximum_students) || 0),
+          0
+        );
 
-      return {
-        departamento: depto.name, // Nombre del depto (San Salvador, etc.)
-        proyectos: proyectosEnDepto.length,
-        estudiantes: estudiantesEnDepto,
-      };
-    }) || [];
+        return {
+          departamento: depto.name,
+          proyectos: proyectosEnDepto.length,
+          estudiantes: estudiantesEnDepto,
+        };
+      }) || []
+    );
+  }, [departaments, projects]);
 
   // --- 4. ARMADO DEL DASHBOARD DATA ---
-  const dashboardData = {
-    metrics: {
-      total_estudiantes: estudiantes?.length || 0,
-      estudiantes_activos: activeStudents.length,
-      proyectos_activos: activeProyects.length,
-      horas_completadas_total: totalHorasCompletadas,
-      total_beneficiarios: totalBeneficiarios, // Nueva métrica agregada
-      promedio_avance: 68, // Esto requeriría un cálculo más complejo de horas esperadas vs reales
-    },
+  // También memorizamos el objeto final para evitar re-renders innecesarios en los hijos
+  const dashboardData = useMemo(
+    () => ({
+      metrics: {
+        total_estudiantes: estudiantes?.length || 0,
+        estudiantes_activos: activeStudents.length,
+        proyectos_activos: activeProyects.length,
+        horas_completadas_total: totalHorasCompletadas,
+        total_beneficiarios: totalBeneficiarios,
+        promedio_avance: 68,
+      },
 
-    // Lógica optimizada con .map para los años
-    estudiantes_por_año: [1, 2, 3, 4, 5].map((year) => ({
-      año: `${year}°`,
-      cantidad: estudiantes?.filter((e) => e.career_year === year).length || 0,
-      completado:
-        estudiantes?.filter(
-          (e) =>
-            e.career_year === year &&
-            (Number(e.external_hours) || 0) + (Number(e.internal_hours) || 0) >=
-              600
-        ).length || 0,
-    })),
+      estudiantes_por_año: [1, 2, 3, 4, 5].map((year) => ({
+        año: `${year}°`,
+        cantidad:
+          estudiantes?.filter((e) => e.career_year === year).length || 0,
+        completado:
+          estudiantes?.filter(
+            (e) =>
+              e.career_year === year &&
+              (Number(e.external_hours) || 0) +
+                (Number(e.internal_hours) || 0) >=
+                600
+          ).length || 0,
+      })),
 
-    horas_por_tipo: [
-      { name: "Horas Internas", value: totalHorasInternas, color: "#3b82f6" },
-      { name: "Horas Externas", value: totalHorasExternas, color: "#10b981" },
-    ],
+      horas_por_tipo: [
+        { name: "Horas Internas", value: totalHorasInternas, color: "#3b82f6" },
+        { name: "Horas Externas", value: totalHorasExternas, color: "#10b981" },
+      ],
 
-    // Usamos los datos calculados arriba
-    proyectos_por_carrera: dataProyectosPorCarrera,
-
-    // Usamos los datos calculados arriba
-    proyectos_por_departamento: dataProyectosPorDepto,
-  };
+      proyectos_por_carrera: dataProyectosPorCarrera,
+      proyectos_por_departamento: dataProyectosPorDepto,
+    }),
+    [
+      estudiantes,
+      activeStudents,
+      activeProyects,
+      totalHorasCompletadas,
+      totalBeneficiarios,
+      totalHorasInternas,
+      totalHorasExternas,
+      dataProyectosPorCarrera,
+      dataProyectosPorDepto,
+    ]
+  );
 
   const currentYear = new Date().getFullYear();
 
@@ -186,7 +237,7 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">
               {Math.round(
                 (dashboardData.metrics.estudiantes_activos /
-                  dashboardData.metrics.total_estudiantes) *
+                  (dashboardData.metrics.total_estudiantes || 1)) *
                   100
               )}
               % del total
@@ -289,16 +340,19 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Proyectos por departamento e impacto social */}
+      {/* Proyectos por carrera y por departamento */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Proyectos por Carrera</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
               {dashboardData.proyectos_por_carrera.map((dept, index) => (
-                <div key={index} className="flex items-center justify-between">
+                <div
+                  key={index}
+                  className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
+                >
                   <div className="flex flex-col">
                     <span className="font-medium">{dept.departamento}</span>
                     <span className="text-sm text-muted-foreground">
@@ -306,7 +360,9 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
+                    <Badge
+                      variant={dept.proyectos > 0 ? "secondary" : "outline"}
+                    >
                       {dept.proyectos} proyectos
                     </Badge>
                   </div>
@@ -321,9 +377,12 @@ export default function DashboardPage() {
             <CardTitle>Proyectos por Departamento</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
               {dashboardData.proyectos_por_departamento.map((dept, index) => (
-                <div key={index} className="flex items-center justify-between">
+                <div
+                  key={index}
+                  className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
+                >
                   <div className="flex flex-col">
                     <span className="font-medium">{dept.departamento}</span>
                     <span className="text-sm text-muted-foreground">
@@ -340,35 +399,6 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* <Card>
-          <CardHeader>
-            <CardTitle>Impacto Social - Beneficiarios</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={dashboardData.impacto_reciente}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" />
-                <YAxis />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="beneficiarios"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={{ fill: "#10b981" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-            <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Total beneficiarios este año:
-              </span>
-              <span className="font-bold text-green-600">12,700 personas</span>
-            </div>
-          </CardContent>
-        </Card> */}
       </div>
     </div>
   );
