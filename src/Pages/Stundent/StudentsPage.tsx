@@ -65,6 +65,7 @@ export default function UsersPage() {
   const [openProgress, setOpenProgress] = useState(false);
   const [progress, setProgress] = useState(0);
   const [totalRows, setTotalRows] = useState(0);
+  const [exporting, setExporting] = useState(false);
 
   // Formulario original intacto
   const form = useForm<z.infer<typeof StudentSchema>>({
@@ -415,6 +416,54 @@ export default function UsersPage() {
     }
   }, [studentCard]);
 
+  const exportToExcel = async () => {
+    if (!estudiantes || estudiantes.length === 0) {
+      toast.error("No hay datos para exportar");
+      return;
+    }
+
+    try {
+      setExporting(true);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const dataToExport = estudiantes.map((e) => ({
+        Carnet: e.student_id_card,
+        Apellidos: e.lastname,
+        Nombres: e.name,
+        Carrera: e.career?.name ?? "",
+        "Horas externas": e.external_hours ?? 0,
+        "Horas internas": e.internal_hours ?? 0,
+        Correo: e.email ?? "",
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+      const range = XLSX.utils.decode_range(worksheet["!ref"] as string);
+
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C }); // fila 0 = encabezado
+        if (!worksheet[cellAddress]) continue;
+
+        worksheet[cellAddress].s = {
+          font: { bold: true },
+        };
+      }
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Estudiantes");
+
+      XLSX.writeFile(
+        workbook,
+        `estudiantes_${new Date().toISOString().split("T")[0]}.xlsx`
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al exportar estudiantes");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <>
       {loading && <Spinner />}
@@ -468,9 +517,23 @@ export default function UsersPage() {
                 className="hidden"
                 onChange={handleFile}
               />
-              <Button variant="outline" className="rounded-xl">
-                <Download className="w-4 h-4 mr-2" />
-                Exportar
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={exportToExcel}
+                disabled={exporting}
+              >
+                {exporting ? (
+                  <>
+                    <Spinner />
+                    Exportando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar
+                  </>
+                )}
               </Button>
             </div>
           </div>
