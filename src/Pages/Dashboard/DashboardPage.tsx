@@ -1,4 +1,5 @@
-import { useMemo } from "react"; // <--- Importamos useMemo
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, BookOpen, Clock, Calendar, Target } from "lucide-react";
@@ -40,6 +41,26 @@ export default function DashboardPage() {
     [projects]
   );
 
+  // --- NUEVO: Proyectos creados este mes ---
+  const proyectosNuevosMes = useMemo(() => {
+    if (!projects) return 0;
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11
+    const currentYear = now.getFullYear();
+
+    return projects.filter((p) => {
+      // Asegúrate de que tu backend devuelve 'createdAt'
+      // Si no, usa 'start_date' pero 'createdAt' es más preciso para "Nuevos en el sistema"
+      const projectDate = new Date(p.createdAt || p.start_date);
+
+      return (
+        projectDate.getMonth() === currentMonth &&
+        projectDate.getFullYear() === currentYear
+      );
+    }).length;
+  }, [projects]);
+  // ------------------------------------------
+
   // Total Beneficiarios
   const totalBeneficiarios = useMemo(
     () =>
@@ -78,43 +99,37 @@ export default function DashboardPage() {
 
   // --- 3. CÁLCULOS COMPLEJOS (Cruces de datos) ---
 
-  // A. Proyectos por Carrera (LÓGICA CORREGIDA PARA TU JSON ACTUAL)
+  // A. Proyectos por Carrera
   const dataProyectosPorCarrera = useMemo(() => {
-    return carreras?.map((carrera) => {
-      const proyectosDeCarrera =
-        projects?.filter((p) => {
-          // Normalizamos los IDs a String para comparar sin miedo ("13" vs 13)
-          const idCarreraContext = String(carrera.id);
-          const idRequeridoProyecto = p.req_career ? String(p.req_career) : null;
+    return (
+      carreras?.map((carrera) => {
+        const proyectosDeCarrera =
+          projects?.filter((p) => {
+            const idCarreraContext = String(carrera.id);
+            const idRequeridoProyecto = p.req_career
+              ? String(p.req_career)
+              : null;
 
-          // 1. Verificamos la relación antigua (Legacy)
-          const esLegacy = idRequeridoProyecto === idCarreraContext;
+            const esLegacy = idRequeridoProyecto === idCarreraContext;
+            const esUniversal = idRequeridoProyecto === "0";
+            const tieneLaCarrera = p.careers?.some(
+              (c: any) => String(c.id) === idCarreraContext
+            );
 
-          // 2. Verificamos si el proyecto es "Universal" (req_career es "0")
-          // Esto hará que el proyecto cuente para TODAS las carreras
-          const esUniversal = idRequeridoProyecto === "0";
+            return esLegacy || esUniversal || tieneLaCarrera;
+          }) || [];
 
-          // 3. Verificamos la nueva relación (Muchos a Muchos)
-          // Usamos "?.some" protegiendo por si careers es undefined
-          // Nota: any se usa temporalmente porque tu backend no manda la estructura tipada aún
-          const tieneLaCarrera = p.careers?.some(
-            (c: any) => String(c.id) === idCarreraContext
-          );
-
-          // Si CUALQUIERA de las 3 condiciones se cumple, lo contamos
-          return esLegacy || esUniversal || tieneLaCarrera;
-        }) || [];
-
-      return {
-        departamento: carrera.name,
-        proyectos: proyectosDeCarrera.length,
-        estudiantes:
-          estudiantes?.filter((e) => e.career?.id === carrera.id).length || 0,
-      };
-    }) || [];
+        return {
+          departamento: carrera.name,
+          proyectos: proyectosDeCarrera.length,
+          estudiantes:
+            estudiantes?.filter((e) => e.career?.id === carrera.id).length || 0,
+        };
+      }) || []
+    );
   }, [carreras, projects, estudiantes]);
 
-  // B. Proyectos por Departamento Geográfico (MEMORIZADO)
+  // B. Proyectos por Departamento Geográfico
   const dataProyectosPorDepto = useMemo(() => {
     return (
       departaments?.map((depto) => {
@@ -136,13 +151,13 @@ export default function DashboardPage() {
   }, [departaments, projects]);
 
   // --- 4. ARMADO DEL DASHBOARD DATA ---
-  // También memorizamos el objeto final para evitar re-renders innecesarios en los hijos
   const dashboardData = useMemo(
     () => ({
       metrics: {
         total_estudiantes: estudiantes?.length || 0,
         estudiantes_activos: activeStudents.length,
         proyectos_activos: activeProyects.length,
+        proyectos_nuevos_mes: proyectosNuevosMes, // <--- Agregado aquí
         horas_completadas_total: totalHorasCompletadas,
         total_beneficiarios: totalBeneficiarios,
         promedio_avance: 68,
@@ -174,6 +189,7 @@ export default function DashboardPage() {
       estudiantes,
       activeStudents,
       activeProyects,
+      proyectosNuevosMes, // <--- Agregado a dependencias
       totalHorasCompletadas,
       totalBeneficiarios,
       totalHorasInternas,
@@ -257,7 +273,11 @@ export default function DashboardPage() {
               {dashboardData.metrics.proyectos_activos}
             </div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-blue-600">8 nuevos</span> este mes
+              {/* --- AQUÍ MOSTRAMOS EL DATO NUEVO --- */}
+              <span className="text-blue-600 font-semibold">
+                +{dashboardData.metrics.proyectos_nuevos_mes} nuevos
+              </span>{" "}
+              este mes
             </p>
           </CardContent>
         </Card>

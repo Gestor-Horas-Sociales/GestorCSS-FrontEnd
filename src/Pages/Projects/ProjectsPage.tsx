@@ -128,7 +128,7 @@ export default function ProjectsPage() {
   }, [form]);
 
   const handleFormSubmit = (data: z.infer<typeof ProjectSchema>) => {
-    const { department_id, ...dataToSend } = data;
+    const { ...dataToSend } = data;
 
     insertProject({
       ...dataToSend,
@@ -330,7 +330,7 @@ export default function ProjectsPage() {
         id: "cupos_vs_asignados",
         header: "Asignación",
         cell: ({ row }) => {
-          const asignados = (row.original as any).students?.length || 0;
+          const asignados = row.original.assignments?.length || 0;
           const cupos = row.original.maximum_students;
           const porcentaje = Math.min(
             100,
