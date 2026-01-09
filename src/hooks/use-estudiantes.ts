@@ -22,34 +22,15 @@ export const useEstudiantes = () => {
   const [activeEdit, setActiveEdit] = useState(false);
 
   const insertStudentsFromExcel = async (students: StudentExcel[]) => {
+    console.count("insertStudentsFromExcel llamada");
+
     if (!students.length) {
-      toast.error("No hay estudiantes para insertar");
-      return;
+      throw new Error("No hay estudiantes para importar");
     }
 
-    console.log("Insertando estudiantes desde Excel:", students);
+    const response = await createEstudiantesFromExcel({ students });
 
-    setLoading(true);
-    try {
-      const response = await createEstudiantesFromExcel({ students });
-      console.log(
-        "Respuesta de insertar estudiantes desde Excel:",
-        response.data
-      );
-      toast.success(`Se insertaron ${response.data.inserted} estudiantes`);
-      if (response.data.errors?.length) {
-        console.warn("Errores en algunos registros:", response.data.errors);
-      }
-      await getAllStudents();
-    } catch (err) {
-      console.error("Error al insertar estudiantes desde Excel:", err);
-      const error = err as AxiosError<{ message?: string }>;
-      toast.error(
-        error.response?.data?.message || "Error al insertar estudiantes"
-      );
-    } finally {
-      setLoading(false);
-    }
+    return response.data;
   };
 
   // Cargar todos los estudiantes
@@ -188,5 +169,6 @@ export const useEstudiantes = () => {
     handleCloseModal,
     calcularHoras,
     insertStudentsFromExcel,
+    getAllStudents,
   };
 };

@@ -9,7 +9,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Upload, Download, Plus, Trash2, FilePenLine } from "lucide-react";
+import {
+  Upload,
+  Download,
+  Plus,
+  Trash2,
+  FilePenLine,
+  FileText,
+} from "lucide-react";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
 import { useCarrera } from "@/hooks/use-carrera";
 import { useForm } from "react-hook-form";
@@ -43,6 +50,10 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const BUCKET_NAME = "plantillas";
+const PUBLIC_STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET_NAME}`;
+
 export default function UsersPage() {
   // Hooks originales sin modificar
   const {
@@ -56,6 +67,7 @@ export default function UsersPage() {
     insertStudent,
     calcularHoras,
     insertStudentsFromExcel,
+    getAllStudents,
   } = useEstudiantes();
 
   const { carreras } = useCarrera();
@@ -66,6 +78,7 @@ export default function UsersPage() {
   const [progress, setProgress] = useState(0);
   const [totalRows, setTotalRows] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [openTemplates, setOpenTemplates] = useState(false);
 
   // Formulario original intacto
   const form = useForm<z.infer<typeof StudentSchema>>({
@@ -254,24 +267,36 @@ export default function UsersPage() {
 
   const procesarImportacion = async (rows: StudentExcel[]) => {
     try {
-      for (let i = 0; i < rows.length; i++) {
-        const student = rows[i];
+      setProgress(0);
+      setOpenProgress(true);
 
-        // Aquí mandas a tu API
-        await insertStudentsFromExcel([student]);
+      const response = await insertStudentsFromExcel(rows);
 
-        // Actualizas la barra de progreso
-        setProgress(Math.round(((i + 1) / rows.length) * 100));
+      const {
+        created = 0,
+        updated = 0,
+        rejected = 0,
+        errors = [],
+      } = response ?? {};
+
+      toast.success(
+        `📥 Importación completada
+        ✔ ${created} creados
+        🔄 ${updated} actualizados
+        ❌ ${rejected} rechazados`
+      );
+
+      if (errors.length > 0) {
+        console.warn("Errores de importación:", errors);
       }
 
-      toast.success("Importación completada");
+      await getAllStudents();
     } catch (error) {
       console.error(error);
       toast.error("Ocurrió un error durante la importación");
     } finally {
-      setTimeout(() => {
-        setOpenProgress(false);
-      }, 800);
+      setProgress(100);
+      setTimeout(() => setOpenProgress(false), 800);
     }
   };
 
@@ -281,6 +306,7 @@ export default function UsersPage() {
    */
   const readExcel = (file: File) => {
     const reader = new FileReader();
+
     reader.onload = (e) => {
       const result = e.target?.result;
       if (!result) {
@@ -293,36 +319,52 @@ export default function UsersPage() {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
 
-        const jsonData =
-          XLSX.utils.sheet_to_json<Record<string, string>>(sheet);
+        const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+          defval: "",
+        });
 
         const formattedData: StudentExcel[] = jsonData.map((row) => ({
-          card: row["Carnet"] || "",
-          lastName: row["Apellidos"] || "",
-          name: row["Nombres"] || "",
+          id: row["ID"] ? Number(row["ID"]) : null,
+          card: row["Carnet"]?.toString().trim() ?? "",
+          lastName: row["Apellidos"]?.toString().trim() ?? "",
+          name: row["Nombres"]?.toString().trim() ?? "",
           career: row["Carrera"]
             ? normalizarCarrera(row["Carrera"].toString())
             : "",
-          hoursType: row["Tipo Horas"]
-            ? row["Tipo Horas"]
-                .toString()
-                .replace(/^\w/, (c) => c.toUpperCase())
-            : "",
-          socialHours: row["Horas sociales"] || "",
-          email: row["Correo"] || "",
+          email: row["Correo"]?.toString().trim() ?? "",
+          internal_hours: Number(row["Horas internas"] ?? 0),
+          external_hours: Number(row["Horas externas"] ?? 0),
         }));
 
-        setTotalRows(formattedData.length);
+        const validRows = formattedData.filter(
+          (s) => s.card && s.name && s.lastName
+        );
+
+        if (validRows.length === 0) {
+          toast.error("El archivo no contiene registros válidos");
+          return;
+        }
+
+        const hasId = validRows.some((s) => s.id !== null);
+        const hasNoId = validRows.some((s) => s.id === null);
+
+        if (hasId && hasNoId) {
+          toast.error("El archivo no puede mezclar filas con y sin ID");
+          return;
+        }
+
+        setTotalRows(validRows.length);
         setProgress(0);
         setOpenProgress(true);
-        procesarImportacion(formattedData);
+        procesarImportacion(validRows);
 
-        console.log("Datos leídos:", formattedData);
+        console.log("Datos Excel importados:", validRows);
       } catch (error) {
         console.error("Error al leer Excel:", error);
         toast.error("Hubo un error al procesar el archivo Excel.");
       }
     };
+
     reader.readAsArrayBuffer(file);
   };
 
@@ -335,38 +377,49 @@ export default function UsersPage() {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        const resultData = result.data as Record<string, string>[];
-
         try {
-          const formattedData: StudentExcel[] = resultData.map((row) => ({
-            card: row["Carnet"] || "",
-            lastName: row["Apellidos"] || "",
-            name: row["Nombres"] || "",
+          const formattedData: StudentExcel[] = (
+            result.data as Record<string, any>[]
+          ).map((row) => ({
+            id: row["ID"] ? Number(row["ID"]) : null,
+            card: row["Carnet"]?.toString().trim() ?? "",
+            lastName: row["Apellidos"]?.toString().trim() ?? "",
+            name: row["Nombres"]?.toString().trim() ?? "",
             career: row["Carrera"]
               ? normalizarCarrera(row["Carrera"].toString())
               : "",
-            hoursType: row["Tipo Horas"]
-              ? row["Tipo Horas"]
-                  .toString()
-                  .replace(/^\w/, (c) => c.toUpperCase())
-              : "",
-            socialHours: row["Horas sociales"] || "",
-            email: row["Correo"] || "",
+            email: row["Correo"]?.toString().trim() ?? "",
+            internal_hours: Number(row["Horas internas"] ?? 0),
+            external_hours: Number(row["Horas externas"] ?? 0),
           }));
 
-          setTotalRows(formattedData.length);
+          const validRows = formattedData.filter(
+            (s) => s.card && s.name && s.lastName
+          );
+
+          if (validRows.length === 0) {
+            toast.error("El archivo no contiene registros válidos");
+            return;
+          }
+
+          const hasId = validRows.some((s) => s.id !== null);
+          const hasNoId = validRows.some((s) => s.id === null);
+
+          if (hasId && hasNoId) {
+            toast.error("El archivo no puede mezclar filas con y sin ID");
+            return;
+          }
+
+          setTotalRows(validRows.length);
           setProgress(0);
           setOpenProgress(true);
-          procesarImportacion(formattedData);
-          console.log("Datos leídos:", formattedData);
+          procesarImportacion(validRows);
+
+          console.log("Datos CSV importados:", validRows);
         } catch (error) {
           console.error("Error al leer CSV:", error);
           toast.error("Hubo un error al procesar el archivo CSV.");
         }
-      },
-      error: (err) => {
-        console.error("Error con PapaParse:", err);
-        toast.error("No se pudo leer el archivo CSV.");
       },
     });
   };
@@ -427,13 +480,14 @@ export default function UsersPage() {
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       const dataToExport = estudiantes.map((e) => ({
+        ID: e.id,
         Carnet: e.student_id_card,
         Apellidos: e.lastname,
         Nombres: e.name,
         Carrera: e.career?.name ?? "",
-        "Horas externas": e.external_hours ?? 0,
-        "Horas internas": e.internal_hours ?? 0,
         Correo: e.email ?? "",
+        "Horas internas": e.internal_hours ?? 0,
+        "Horas externas": e.external_hours ?? 0,
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -441,7 +495,7 @@ export default function UsersPage() {
       const range = XLSX.utils.decode_range(worksheet["!ref"] as string);
 
       for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C }); // fila 0 = encabezado
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
         if (!worksheet[cellAddress]) continue;
 
         worksheet[cellAddress].s = {
@@ -462,6 +516,18 @@ export default function UsersPage() {
     } finally {
       setExporting(false);
     }
+  };
+
+  const downloadTemplate = (fileName: string) => {
+    const fullUrl = `${PUBLIC_STORAGE_URL}/${fileName}`;
+
+    const link = document.createElement("a");
+    link.href = fullUrl;
+    link.setAttribute("download", fileName);
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   return (
@@ -534,6 +600,14 @@ export default function UsersPage() {
                     Exportar
                   </>
                 )}
+              </Button>
+              <Button
+                variant="outline"
+                className="rounded-xl bg-transparent"
+                onClick={() => setOpenTemplates(true)}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Plantillas
               </Button>
             </div>
           </div>
@@ -770,6 +844,36 @@ export default function UsersPage() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de Plantillas */}
+      <Dialog open={openTemplates} onOpenChange={setOpenTemplates}>
+        <DialogContent className="max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>Descargar Plantillas</DialogTitle>
+            <DialogDescription>
+              Selecciona la plantilla que necesitas para crear o editar
+              estudiantes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Button
+              onClick={() => downloadTemplate("01_crear_estudiantes.xlsx")}
+              className="w-full rounded-xl cursor-pointer"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Plantilla - Crear Estudiantes
+            </Button>
+            <Button
+              onClick={() => downloadTemplate("02_actualizar_estudiantes.xlsx")}
+              className="w-full rounded-xl cursor-pointer"
+              variant="outline"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Plantilla - Editar Estudiantes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

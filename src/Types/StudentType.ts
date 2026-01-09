@@ -1,13 +1,14 @@
 import { z } from "zod";
 
 export interface StudentExcel {
+  id: number | null;
   card: string;
   lastName: string;
   name: string;
   career: string;
-  hoursType: string;
-  socialHours: string;
   email: string;
+  internal_hours: number;
+  external_hours: number;
 }
 
 export interface StudentType {
