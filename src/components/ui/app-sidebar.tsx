@@ -74,7 +74,7 @@ const data = {
       items: [
         { title: "Reportes Individuales", url: "/reports/individual" },
         { title: "Reportes por Proyecto", url: "/reports/projects" },
-        { title: "Memoria Anual", url: "/reports/annual" },
+        { title: "Reporte Anual", url: "/reports/annual" },
       ],
     },
     {

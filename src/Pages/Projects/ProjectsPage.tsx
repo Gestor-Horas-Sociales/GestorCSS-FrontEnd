@@ -128,7 +128,7 @@ export default function ProjectsPage() {
   }, [form]);
 
   const handleFormSubmit = (data: z.infer<typeof ProjectSchema>) => {
-    const { ...dataToSend } = data;
+    const { department_id, ...dataToSend } = data;
 
     insertProject({
       ...dataToSend,
