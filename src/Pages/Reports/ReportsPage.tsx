@@ -159,7 +159,7 @@ export default function ReportsPage() {
     departaments
       ?.map((depto, index) => {
         const count =
-          projects?.filter((p) => p.district?.departament_id === depto.id)
+          projects?.filter((p) => p.district_id === depto.id)
             .length || 0;
         return {
           name: depto.name,
@@ -172,7 +172,7 @@ export default function ReportsPage() {
   const dataPorCarrera =
     carreras?.map((carrera) => {
       const studentsInCareer =
-        estudiantes?.filter((e) => e.career_id === carrera.id) || [];
+        estudiantes?.filter((e) => e.career?.id === carrera.id) || [];
       const totalHoursInCareer = studentsInCareer.reduce(
         (acc, s) =>
           acc +
