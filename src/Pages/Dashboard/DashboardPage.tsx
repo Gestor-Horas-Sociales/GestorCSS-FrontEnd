@@ -51,7 +51,7 @@ export default function DashboardPage() {
     return projects.filter((p) => {
       // Asegúrate de que tu backend devuelve 'createdAt'
       // Si no, usa 'start_date' pero 'createdAt' es más preciso para "Nuevos en el sistema"
-      const projectDate = new Date(p.createdAt || p.start_date);
+      const projectDate = new Date(p.start_date);
 
       return (
         projectDate.getMonth() === currentMonth &&
