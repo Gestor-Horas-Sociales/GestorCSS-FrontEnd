@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback } from "react";
 import {
   getAssignmentsByProject,
@@ -26,8 +27,8 @@ export const useAssignment = () => {
       setAssignments(data);
     } catch (err: any) {
       console.error(err);
-      setError("Error al cargar asignaciones");
-      toast.error("Error al cargar asignaciones");
+      setError("Error al cargar asignaciones: " + (err.response?.data?.error || ""));
+      toast.error("Error al cargar asignaciones: " + (err.response?.data?.error || ""));
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +73,7 @@ export const useAssignment = () => {
       toast.success(`Estado actualizado a ${newStatus}`);
     } catch (err: any) {
       setAssignments(originalAssignments);
-      toast.error("Error al actualizar el estado");
+      toast.error("Error al actualizar el estado: " + (err.response?.data?.error || ""));
     }
   };
 
@@ -90,7 +91,7 @@ export const useAssignment = () => {
       
       toast.success("Asignación eliminada");
     } catch (err: any) {
-      toast.error("Error al eliminar asignación");
+      toast.error("Error al eliminar asignación: " + (err.response?.data?.error || ""));
     } finally {
       setIsLoading(false);
     }
