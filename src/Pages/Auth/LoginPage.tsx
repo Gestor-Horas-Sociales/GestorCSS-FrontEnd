@@ -10,7 +10,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Shield } from "lucide-react";
+import { Shield, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { ModeToggle } from "@/components/ModeToggle";
 import { useNavigate } from "react-router";
@@ -20,16 +20,73 @@ import { jwtDecode } from "jwt-decode";
 import { useEffect, useRef, useState } from "react";
 import Spinner from "@/components/Spinner";
 import { useAuthStore } from "@/store/authStore";
+import { AxiosError } from "axios";
 
 export default function LoginPage() {
   const { instance } = useMsal();
   const { login } = useAuthStore();
 
   const navigate = useNavigate();
-
   const [loading, setLoading] = useState(false);
-
   const handledRef = useRef(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const [errors, setErrors] = useState({ email: false, password: false });
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const newErrors = {
+      email: !email,
+      password: !password,
+    };
+
+    setErrors(newErrors);
+
+    if (newErrors.email) {
+      emailRef.current?.focus();
+      toast.error("El correo electrónico es obligatorio.");
+      return;
+    }
+
+    if (newErrors.password) {
+      passwordRef.current?.focus();
+      toast.error("La contraseña es obligatoria.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+
+      const response = await api.post("/auth/login", {
+        email,
+        password,
+      });
+
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("authMethod", String(1)); // 1 for email/password
+
+      login();
+
+      const user: UserType = jwtDecode(response.data.token);
+      const redirectPath = user.role === 2 ? "/hours" : "/dashboard";
+
+      navigate(redirectPath);
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+
+      const message =
+        axiosError.response?.data?.message ?? "Error al iniciar sesión";
+
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (handledRef.current) return;
@@ -51,26 +108,26 @@ export default function LoginPage() {
         });
 
         localStorage.setItem("token", response.data.token);
+        localStorage.setItem("authMethod", String(2)); // 2 for Microsoft login
         login();
 
         const user: UserType = jwtDecode(response.data.token);
         const redirectPath = user.role === 2 ? "/hours" : "/dashboard";
 
         navigate(redirectPath);
-      } catch (error: any) {
-        console.error("Error en login con Microsoft:", error);
+      } catch (error) {
+        const axiosError = error as AxiosError<{ message?: string }>;
 
         const message =
-          error?.response?.data?.message || "Error al iniciar sesión";
+          axiosError.response?.data?.message ?? "Error al iniciar sesión";
 
         toast.error(message);
-
         instance.setActiveAccount(null);
       } finally {
         setLoading(false);
       }
     });
-  }, []);
+  }, [instance, login, navigate]);
 
   const handleMicrosoftLogin = async () => {
     instance.loginRedirect(loginRequest);
@@ -146,12 +203,92 @@ export default function LoginPage() {
                     Acceso al Sistema
                   </CardTitle>
                   <CardDescription>
-                    Utilice sus credenciales institucionales de Microsoft para
-                    ingresar al Sistema de Gestión de Horas Sociales
+                    ` Utilice sus credenciales institucionales de Microsoft para
+                    ` ingresar al Sistema de Gestión de Horas Sociales
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-3">
+                  <form onSubmit={handleEmailLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="email"
+                        className="text-sm font-medium ml-1"
+                      >
+                        Email
+                      </label>
+                      <input
+                        ref={emailRef}
+                        id="email"
+                        type="email"
+                        placeholder="tu@email.com"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (errors.email)
+                            setErrors({ ...errors, email: false });
+                        }}
+                        className={`w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white text-black transition-colors ${
+                          errors.email
+                            ? "border-red-500 focus:ring-red-200"
+                            : "border-slate-300 focus:ring-blue-500"
+                        }`}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="password"
+                        className="text-sm font-medium ml-1"
+                      >
+                        Contraseña
+                      </label>
+                      <div className="relative">
+                        <input
+                          ref={passwordRef}
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Contraseña"
+                          value={password}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            if (errors.password) {
+                              setErrors({ ...errors, password: false });
+                            }
+                          }}
+                          className={`w-full mt-1 px-4 py-2 border rounded-lg pr-10 focus:outline-none focus:ring-2 bg-white text-black transition-colors ${
+                            errors.password
+                              ? "border-red-500 focus:ring-red-200"
+                              : "border-slate-300 focus:ring-blue-500"
+                          }`}
+                          autoComplete="current-password"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                          tabIndex={-1}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-5 h-5" />
+                          ) : (
+                            <Eye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full rounded-lg px-4 py-2 cursor-pointer"
+                      size="lg"
+                      disabled={loading}
+                    >
+                      {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                    </Button>
+                  </form>
+
                   <Button
                     onClick={handleMicrosoftLogin}
                     className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer rounded-lg px-4 py-2"

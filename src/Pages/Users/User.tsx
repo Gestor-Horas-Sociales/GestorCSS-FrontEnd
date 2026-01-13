@@ -4,7 +4,7 @@ import { useUser } from "@/hooks/use-user";
 import Spinner from "@/components/Spinner";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { UserPayload } from "@/Types/UserType";
-import { UserSchema } from "@/Types/UserType";
+import { UpdateUserSchema, CreateUserSchema } from "@/Types/UserType";
 import { useTable } from "@/hooks/useTable";
 import TableStructure from "@/components/TableStructure";
 import { Trash2, FilePenLine } from "lucide-react";
@@ -25,6 +25,7 @@ import { Form } from "@/components/ui/form";
 import FormTextField from "@/components/FormTextField";
 import FormSelectField from "@/components/FormSelectField";
 import { zodResolver } from "@hookform/resolvers/zod";
+import FormPasswordField from "@/components/FormPasswordField";
 
 const INITIAL_VALUES_ROLE = [
   { id: 1, name: "Administrador" },
@@ -47,15 +48,23 @@ export default function User() {
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
   const [idDelete, setIdDelete] = useState(0);
 
-  const form = useForm<z.infer<typeof UserSchema>>({
-    resolver: zodResolver(UserSchema),
-    defaultValues: {
-      name: "",
-      lastname: "",
-      email: "",
-      role: undefined,
-    },
-  });
+  type UserFormValues =
+  | z.infer<typeof CreateUserSchema>
+  | z.infer<typeof UpdateUserSchema>;
+
+
+  const form = useForm<UserFormValues>({
+  resolver: zodResolver(
+    activeEdit ? UpdateUserSchema : CreateUserSchema
+  ),
+  defaultValues: {
+    name: "",
+    lastname: "",
+    email: "",
+    password: "",
+    role: undefined,
+  },
+});
 
   const openDialogDelete = useCallback((id: number) => {
     setOpenAlertDelete(true);
@@ -75,6 +84,7 @@ export default function User() {
         name,
         lastname,
         email,
+        password: "",
         role,
       });
       setActiveEdit(true);
@@ -208,6 +218,7 @@ export default function User() {
                 name: "",
                 lastname: "",
                 email: "",
+                password: "",
                 role: undefined,
               });
             }
@@ -249,6 +260,22 @@ export default function User() {
                       placeholder="Ingrese el email"
                       formField={form}
                     />
+                    <FormPasswordField
+                      nameField="password"
+                      label={
+                        activeEdit
+                          ? "Nueva contraseña (opcional)"
+                          : "Contraseña"
+                      }
+                      placeholder={
+                        activeEdit
+                          ? "Solo si desea cambiarla"
+                          : "Ingrese la contraseña"
+                      }
+                      formField={form}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                     <FormSelectField
                       nameField="role"
                       label="Rol"

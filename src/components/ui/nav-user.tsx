@@ -28,12 +28,15 @@ export function NavUser({
   };
 }) {
   const instance = useMsal();
+
   const { isMobile } = useSidebar();
   const logout = useAuthStore((state) => state.logout);
+  const method = localStorage.getItem("authMethod");
 
   const handleLogout = () => {
     logout();
-    instance.instance.logout();
+
+    if (Number(method) === 2) instance.instance.logout();
   };
 
   return (

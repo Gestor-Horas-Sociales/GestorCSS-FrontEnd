@@ -27,7 +27,6 @@ export function useTable<TData>({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-
   const [globalFilter, setGlobalFilter] = useState("");
 
   const table = useReactTable({
@@ -45,16 +44,14 @@ export function useTable<TData>({
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
+
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    globalFilterFn: (row, _columnId, filterValue) => {
-      return Object.values(row.original as Record<string, unknown>)
-        .join(" ")
-        .toLowerCase()
-        .includes(filterValue.toLowerCase());
-    },
+
+    globalFilterFn: "includesString",
+
     initialState: {
       pagination: {
         pageSize: initialPageSize,
@@ -62,9 +59,5 @@ export function useTable<TData>({
     },
   });
 
-  return {
-    table,
-    globalFilter,
-    setGlobalFilter,
-  };
+  return { table, globalFilter, setGlobalFilter };
 }

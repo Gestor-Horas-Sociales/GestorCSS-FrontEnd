@@ -34,15 +34,28 @@ type role = {
   name: string;
 };
 
-export const UserSchema = z.object({
+export const UserBaseSchema = z.object({
   id: z.number().optional(),
-  name: z.string().nonempty({ message: "Nombre es requerido" }),
-  lastname: z.string().nonempty({ message: "Apellido es requerido" }),
-  email: z
+  name: z.string().nonempty("Nombre es requerido"),
+  lastname: z.string().nonempty("Apellido es requerido"),
+  email: z.string().email("Correo inválido"),
+  password: z
     .string()
-    .nonempty({ message: "Correo es requerido" })
-    .email({ message: "Correo inválido" }),
-  role: z.number({
-    message: "Rol es requerido",
-  }),
+    .min(8, "Mínimo 8 caracteres")
+    .regex(/[A-Z]/, "Debe tener una mayúscula")
+    .regex(/[0-9]/, "Debe tener un número")
+    .optional(),
+  role: z.number(),
 });
+
+export const CreateUserSchema = UserBaseSchema.extend({
+    password: z
+    .string({
+      required_error: "Contraseña es requerida",
+    })
+    .min(8, "Mínimo 8 caracteres")
+    .regex(/[A-Z]/, "Debe tener una mayúscula")
+    .regex(/[0-9]/, "Debe tener un número"),
+});
+
+export const UpdateUserSchema = UserBaseSchema; // password opcional

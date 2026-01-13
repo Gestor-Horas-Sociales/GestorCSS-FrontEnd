@@ -4,7 +4,7 @@ import { useUser } from "@/hooks/use-user";
 import Spinner from "@/components/Spinner";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { UserPayload } from "@/Types/UserType";
-import { UserSchema } from "@/Types/UserType";
+import { UserBaseSchema } from "@/Types/UserType";
 import { useTable } from "@/hooks/useTable";
 import TableStructure from "@/components/TableStructure";
 import { Trash2, FilePenLine } from "lucide-react";
@@ -47,12 +47,15 @@ export default function User() {
   const [openAlertDelete, setOpenAlertDelete] = useState(false);
   const [idDelete, setIdDelete] = useState(0);
 
-  const form = useForm<z.infer<typeof UserSchema>>({
-    resolver: zodResolver(UserSchema),
+  type UserFormValues = z.infer<typeof UserBaseSchema>;
+
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(UserBaseSchema),
     defaultValues: {
       name: "",
       lastname: "",
       email: "",
+      password: "",
       role: undefined,
     },
   });

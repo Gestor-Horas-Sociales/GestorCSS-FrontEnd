@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/form";
 import FormTextField from "@/components/FormTextField";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
-import FormSelectField from "@/components/FormSelectField"; // Mantener para el select simple de Tipo de Horas
+import FormSelectField from "@/components/FormSelectField";
 import type { z } from "zod";
 import GeneralAlert from "@/components/GeneralAlert";
 import { Badge } from "@/components/ui/badge";
@@ -199,6 +199,23 @@ export default function HoursPage() {
           {row.original.type_hours_id === 1 ? "Internas" : "Externas"}
         </Badge>
       ),
+    },
+    {
+      id: "student_search",
+      accessorFn: (row) => {
+        if (!row.student) return "";
+
+        return [
+          row.student.name,
+          row.student.lastname,
+          row.student.student_id_card,
+          row.student.email,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+      },
+      enableGlobalFilter: true,
     },
     {
       id: "actions",
