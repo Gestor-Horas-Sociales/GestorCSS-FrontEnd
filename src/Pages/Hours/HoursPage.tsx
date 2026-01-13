@@ -137,6 +137,19 @@ export default function HoursPage() {
     {
       accessorKey: "student",
       header: "Estudiante",
+      accessorFn: (row) => {
+        if (!row.student) return "";
+
+        return [
+          row.student.name,
+          row.student.lastname,
+          row.student.student_id_card,
+          row.student.email,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+      },
       cell: ({ row }) => {
         const student = row.original.student;
         return student ? (
@@ -156,6 +169,11 @@ export default function HoursPage() {
     {
       accessorKey: "project",
       header: "Proyecto",
+      accessorFn: (row) => {
+        if (!row.project) return "";
+
+        return [row.project.name].filter(Boolean).join(" ").toLowerCase();
+      },
       cell: ({ row }) => {
         const project = row.original.project;
         return project ? (
@@ -170,6 +188,9 @@ export default function HoursPage() {
     {
       accessorKey: "hours",
       header: "Horas",
+      accessorFn: (row) => {
+        return row.hours;
+      },
       cell: ({ row }) => (
         <div className="text-center">
           <div className="text-lg font-bold">{row.original.hours}</div>
@@ -180,6 +201,18 @@ export default function HoursPage() {
     {
       accessorKey: "date_register",
       header: "Fecha",
+      accessorFn: (row) => {
+        const date = new Date(row.date_register);
+
+        return [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, "0"),
+          String(date.getDate()).padStart(2, "0"),
+          date.toLocaleDateString("es-ES"),
+        ]
+          .join(" ")
+          .toLowerCase();
+      },
       cell: ({ row }) => {
         const date = new Date(row.original.date_register);
         return date.toLocaleDateString("es-ES", {
@@ -192,6 +225,7 @@ export default function HoursPage() {
     {
       accessorKey: "type_hours_id",
       header: "Tipo de Horas",
+      accessorFn: (row) => (row.type_hours_id === 1 ? "internas" : "externas"),
       cell: ({ row }) => (
         <Badge
           variant={row.original.type_hours_id === 1 ? "default" : "secondary"}
@@ -199,32 +233,6 @@ export default function HoursPage() {
           {row.original.type_hours_id === 1 ? "Internas" : "Externas"}
         </Badge>
       ),
-    },
-    {
-      id: "student_search",
-      accessorFn: (row) => {
-        if (!row.student) return "";
-
-        return [
-          row.student.name,
-          row.student.lastname,
-          row.student.student_id_card,
-          row.student.email,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-      },
-      enableGlobalFilter: true,
-    },
-    {
-      id: "project_search",
-      accessorFn: (row) => {
-        if (!row.project) return "";
-
-        return [row.project.name].filter(Boolean).join(" ").toLowerCase();
-      },
-      enableGlobalFilter: true,
     },
     {
       id: "actions",
