@@ -218,6 +218,15 @@ export default function HoursPage() {
       enableGlobalFilter: true,
     },
     {
+      id: "project_search",
+      accessorFn: (row) => {
+        if (!row.project) return "";
+
+        return [row.project.name].filter(Boolean).join(" ").toLowerCase();
+      },
+      enableGlobalFilter: true,
+    },
+    {
       id: "actions",
       header: "Acciones",
       cell: ({ row }) => (
