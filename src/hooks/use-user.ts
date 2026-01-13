@@ -1,4 +1,4 @@
-import type { UserSchema, UserPayload } from "@/Types/UserType";
+import type { UserBaseSchema, UserPayload } from "@/Types/UserType";
 import { useState, useEffect, useCallback } from "react";
 import { getUsers, deleteUser, updateUser, createUser } from "@/api/user";
 import { toast } from "sonner";
@@ -44,7 +44,7 @@ export const useUser = () => {
     }
   };
 
-  const insertUser = async (data: z.infer<typeof UserSchema>) => {
+  const insertUser = async (data: z.infer<typeof UserBaseSchema>) => {
     setLoading(true);
 
     // Cambiando nombre al campo role
