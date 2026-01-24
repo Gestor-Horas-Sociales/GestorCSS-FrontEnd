@@ -461,16 +461,25 @@ export default function UsersPage() {
     try {
       setExporting(true);
       await new Promise((resolve) => setTimeout(resolve, 300));
-      const dataToExport = estudiantes.map((e) => ({
-        ID: e.id,
-        Carnet: e.student_id_card,
-        Apellidos: e.lastname,
-        Nombres: e.name,
-        Carrera: e.career?.name ?? "",
-        Correo: e.email ?? "",
-        "Horas internas": e.internal_hours ?? 0,
-        "Horas externas": e.external_hours ?? 0,
-      }));
+
+      const dataToExport = estudiantes.map((e) => {
+        const internas = e.internal_hours ?? 0;
+        const externas = e.external_hours ?? 0;
+
+        return {
+          ID: e.id,
+          Carnet: e.student_id_card,
+          Apellidos: e.lastname,
+          Nombres: e.name,
+          Carrera: e.career?.name ?? "",          
+          "Año carrera": e.career_year ?? 1, 
+          Correo: e.email ?? "",
+          "Horas internas": internas,
+          "Horas externas": externas,
+          "Total Horas": internas + externas,
+        };
+      });
+
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Estudiantes");
@@ -538,7 +547,7 @@ export default function UsersPage() {
                 className="rounded-xl"
                 onClick={handleClick}
               >
-                <Upload className="w-4 h-4 mr-2" />
+                <Download className="w-4 h-4 mr-2" />
                 Importar Excel
               </Button>
               <input
@@ -560,7 +569,7 @@ export default function UsersPage() {
                   </>
                 ) : (
                   <>
-                    <Download className="w-4 h-4 mr-2" /> Exportar
+                    <Upload className="w-4 h-4 mr-2" /> Exportar
                   </>
                 )}
               </Button>

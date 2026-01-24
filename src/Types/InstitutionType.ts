@@ -13,6 +13,8 @@ export interface InstitutionType {
   updatedAt?: string;
   district_id?: number | null;
   district?: District | null;
+  projectsCount?: number;
+  studentsCount?: number;
 }
 
 export type InstitutionPayload = {

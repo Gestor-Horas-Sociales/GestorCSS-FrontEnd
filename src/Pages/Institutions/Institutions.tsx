@@ -26,6 +26,7 @@ import { useDepartament } from "@/hooks/use-departament";
 import FormSelectField from "@/components/FormSelectField";
 import { z } from "zod";
 import { useDistrict } from "@/hooks/use-district";
+import { Badge } from "@/components/ui/badge";
 
 export default function Institutions() {
   const {
@@ -115,6 +116,26 @@ export default function Institutions() {
       meta: {
         label: "Nombre",
       },
+    },
+    {
+      accessorKey: "projectsCount",
+      header: "Proyectos",
+      meta: {
+        label: "Proyectos",
+      },
+      cell: ({ row }) => (
+        <Badge variant="outline">{row.original.projectsCount}</Badge>
+      ),
+    },
+    {
+      accessorKey: "studentsCount",
+      header: "Estudiantes",
+      meta: {
+        label: "Estudiantes",
+      },
+      cell: ({ row }) => (
+        <Badge variant="outline">{row.original.studentsCount}</Badge>
+      ),
     },
     {
       accessorKey: "district.name",
