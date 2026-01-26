@@ -39,7 +39,6 @@ import type z from "zod";
 import Spinner from "@/components/Spinner";
 import * as XLSX from "xlsx";
 import * as Papa from "papaparse";
-import { normalizarCarrera } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -50,6 +49,7 @@ import {
   AlertDialogTitle,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { normalizarCarrera } from "@/lib/utils";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const BUCKET_NAME = "plantillas";
@@ -119,7 +119,7 @@ export default function UsersPage() {
       active: boolean,
       internal_hours: number,
       external_hours: number,
-      career: { id: number; name: string } | null
+      career: { id: number; name: string } | null,
     ) => {
       setOpen(true);
       setActiveEdit(true);
@@ -140,7 +140,7 @@ export default function UsersPage() {
           : { career_id: 1, career_name: "" },
       });
     },
-    [form, setOpen, setActiveEdit]
+    [form, setOpen, setActiveEdit],
   );
 
   // Columnas de la tabla MODIFICADAS (Con barra de porcentaje real)
@@ -150,20 +150,28 @@ export default function UsersPage() {
         accessorKey: "id",
         header: "ID",
       },
-
       {
-        accessorKey: "name",
+        id: "informacion_estudiante",
         header: "Estudiante",
-        cell: ({ row }) => (
-          <div>
-            <div className="font-medium">
-              {row.original.name} {row.original.lastname}
+        accessorFn: (row) =>
+          `${row.name} ${row.lastname} ${row.student_id_card} ${row.email}`,
+
+        cell: ({ row }) => {
+          const { name, lastname, student_id_card, email } = row.original;
+
+          return (
+            <div className="flex flex-col">
+              <div className="font-medium">
+                {name} {lastname}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {student_id_card} • {email}
+              </div>
             </div>
-            <div className="text-sm text-muted-foreground">
-              {row.original.student_id_card} • {row.original.email}
-            </div>
-          </div>
-        ),
+          );
+        },
+
+        filterFn: "includesString",
       },
       {
         accessorKey: "career.career_name",
@@ -186,7 +194,7 @@ export default function UsersPage() {
         header: "Progreso",
         cell: ({ row }) => {
           const { horasCompletadas, horasRequeridas } = calcularHoras(
-            row.original
+            row.original,
           );
 
           // Cálculo porcentaje real (>100% permitido)
@@ -249,7 +257,7 @@ export default function UsersPage() {
                         id: row.original.career.id,
                         name: row.original.career.name,
                       }
-                    : null
+                    : null,
                 )
               }
             >
@@ -267,7 +275,7 @@ export default function UsersPage() {
         ),
       },
     ],
-    [calcularHoras, editEstudiante, openDialogDelete]
+    [calcularHoras, editEstudiante, openDialogDelete],
   );
 
   const { globalFilter, setGlobalFilter, table } = useTable({
@@ -303,7 +311,7 @@ export default function UsersPage() {
         errors = [],
       } = response ?? {};
       toast.success(
-        `📥 Importación completada: ✔ ${created} creados, 🔄 ${updated} actualizados, ❌ ${rejected} rechazados`
+        `📥 Importación completada: ✔ ${created} creados, 🔄 ${updated} actualizados, ❌ ${rejected} rechazados`,
       );
       if (errors.length > 0) console.warn("Errores:", errors);
       await getAllStudents();
@@ -333,15 +341,14 @@ export default function UsersPage() {
           card: row["Carnet"]?.toString().trim() ?? "",
           lastName: row["Apellidos"]?.toString().trim() ?? "",
           name: row["Nombres"]?.toString().trim() ?? "",
-          career: row["Carrera"]
-            ? normalizarCarrera(row["Carrera"].toString())
-            : "",
+          career: normalizarCarrera(row["Carrera"]?.toString().trim() ?? ""),
           email: row["Correo"]?.toString().trim() ?? "",
+          career_year: row["Año carrera"] ? Number(row["Año carrera"]) : 1,
           internal_hours: Number(row["Horas internas"] ?? 0),
           external_hours: Number(row["Horas externas"] ?? 0),
         }));
         const validRows = formattedData.filter(
-          (s) => s.card && s.name && s.lastName
+          (s) => s.card && s.name && s.lastName,
         );
         if (validRows.length > 0) {
           setTotalRows(validRows.length);
@@ -368,15 +375,14 @@ export default function UsersPage() {
           card: row["Carnet"]?.toString().trim() ?? "",
           lastName: row["Apellidos"]?.toString().trim() ?? "",
           name: row["Nombres"]?.toString().trim() ?? "",
-          career: row["Carrera"]
-            ? normalizarCarrera(row["Carrera"].toString())
-            : "",
+          career: normalizarCarrera(row["Carrera"]?.toString().trim() ?? ""),
+          career_year: row["Año carrera"] ? Number(row["Año carrera"]) : 1,
           email: row["Correo"]?.toString().trim() ?? "",
           internal_hours: Number(row["Horas internas"] ?? 0),
           external_hours: Number(row["Horas externas"] ?? 0),
         }));
         const validRows = formattedData.filter(
-          (s) => s.card && s.name && s.lastName
+          (s) => s.card && s.name && s.lastName,
         );
         if (validRows.length > 0) {
           setTotalRows(validRows.length);
@@ -471,8 +477,8 @@ export default function UsersPage() {
           Carnet: e.student_id_card,
           Apellidos: e.lastname,
           Nombres: e.name,
-          Carrera: e.career?.name ?? "",          
-          "Año carrera": e.career_year ?? 1, 
+          Carrera: e.career?.name ?? "",
+          "Año carrera": e.career_year ?? 1,
           Correo: e.email ?? "",
           "Horas internas": internas,
           "Horas externas": externas,
@@ -485,7 +491,7 @@ export default function UsersPage() {
       XLSX.utils.book_append_sheet(workbook, worksheet, "Estudiantes");
       XLSX.writeFile(
         workbook,
-        `estudiantes_${new Date().toISOString().split("T")[0]}.xlsx`
+        `estudiantes_${new Date().toISOString().split("T")[0]}.xlsx`,
       );
     } catch (error) {
       toast.error("Error al exportar: " + error);
@@ -827,7 +833,7 @@ export default function UsersPage() {
               Plantilla - Crear Estudiantes
             </Button>
             <Button
-              onClick={() => downloadTemplate("02_actualizar_estudiantes.xlsx")}
+              onClick={() => downloadTemplate("02_actualizar_estudiante.xlsx")}
               className="w-full rounded-xl cursor-pointer"
               variant="outline"
             >

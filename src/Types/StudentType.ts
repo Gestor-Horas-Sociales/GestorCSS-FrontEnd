@@ -5,8 +5,9 @@ export interface StudentExcel {
   card: string;
   lastName: string;
   name: string;
-  career: string;
   email: string;
+  career: string;
+  career_year: number;
   internal_hours: number;
   external_hours: number;
 }
