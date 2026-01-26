@@ -11,11 +11,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Upload,
-  Download,
+  Upload, // Para Importar (Subir archivo)
+  Download, // Para Exportar (Bajar archivo)
   Plus,
   Trash2,
-  FilePenLine,
+  Pencil, // Nuevo ícono de Editar (más claro)
   FileText,
 } from "lucide-react";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
@@ -119,7 +119,7 @@ export default function UsersPage() {
       active: boolean,
       internal_hours: number,
       external_hours: number,
-      career: { id: number; name: string } | null,
+      career: { id: number; name: string } | null
     ) => {
       setOpen(true);
       setActiveEdit(true);
@@ -140,10 +140,10 @@ export default function UsersPage() {
           : { career_id: 1, career_name: "" },
       });
     },
-    [form, setOpen, setActiveEdit],
+    [form, setOpen, setActiveEdit]
   );
 
-  // Columnas de la tabla MODIFICADAS (Con barra de porcentaje real)
+  // Columnas de la tabla MODIFICADAS (ÍCONOS BONITOS)
   const columns: ColumnDef<StudentType>[] = useMemo(
     () => [
       {
@@ -194,7 +194,7 @@ export default function UsersPage() {
         header: "Progreso",
         cell: ({ row }) => {
           const { horasCompletadas, horasRequeridas } = calcularHoras(
-            row.original,
+            row.original
           );
 
           // Cálculo porcentaje real (>100% permitido)
@@ -236,10 +236,12 @@ export default function UsersPage() {
         header: "Acciones",
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
+            {/* BOTÓN EDITAR (LÁPIZ) */}
             <Button
-              variant="outline"
-              size="sm"
-              className="cursor-pointer"
+              variant="ghost" // Cambiado a ghost para que sea más limpio
+              size="icon" // Cambiado a icon para que sea cuadrado perfecto
+              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer"
+              title="Editar estudiante" // Tooltip nativo
               onClick={() =>
                 editEstudiante(
                   row.original.id,
@@ -257,16 +259,18 @@ export default function UsersPage() {
                         id: row.original.career.id,
                         name: row.original.career.name,
                       }
-                    : null,
+                    : null
                 )
               }
             >
-              <FilePenLine className="w-4 h-4" />
+              <Pencil className="w-4 h-4" />
             </Button>
+            {/* BOTÓN ELIMINAR (BASURERO) */}
             <Button
-              variant="outline"
-              size="sm"
-              className="text-red-600 cursor-pointer hover:bg-red-50"
+              variant="ghost" // Cambiado a ghost
+              size="icon" // Cambiado a icon
+              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+              title="Eliminar estudiante"
               onClick={() => openDialogDelete(row.original.id)}
             >
               <Trash2 className="w-4 h-4" />
@@ -275,7 +279,7 @@ export default function UsersPage() {
         ),
       },
     ],
-    [calcularHoras, editEstudiante, openDialogDelete],
+    [calcularHoras, editEstudiante, openDialogDelete]
   );
 
   const { globalFilter, setGlobalFilter, table } = useTable({
@@ -311,7 +315,7 @@ export default function UsersPage() {
         errors = [],
       } = response ?? {};
       toast.success(
-        `📥 Importación completada: ✔ ${created} creados, 🔄 ${updated} actualizados, ❌ ${rejected} rechazados`,
+        `📥 Importación completada: ✔ ${created} creados, 🔄 ${updated} actualizados, ❌ ${rejected} rechazados`
       );
       if (errors.length > 0) console.warn("Errores:", errors);
       await getAllStudents();
@@ -348,7 +352,7 @@ export default function UsersPage() {
           external_hours: Number(row["Horas externas"] ?? 0),
         }));
         const validRows = formattedData.filter(
-          (s) => s.card && s.name && s.lastName,
+          (s) => s.card && s.name && s.lastName
         );
         if (validRows.length > 0) {
           setTotalRows(validRows.length);
@@ -382,7 +386,7 @@ export default function UsersPage() {
           external_hours: Number(row["Horas externas"] ?? 0),
         }));
         const validRows = formattedData.filter(
-          (s) => s.card && s.name && s.lastName,
+          (s) => s.card && s.name && s.lastName
         );
         if (validRows.length > 0) {
           setTotalRows(validRows.length);
@@ -491,7 +495,7 @@ export default function UsersPage() {
       XLSX.utils.book_append_sheet(workbook, worksheet, "Estudiantes");
       XLSX.writeFile(
         workbook,
-        `estudiantes_${new Date().toISOString().split("T")[0]}.xlsx`,
+        `estudiantes_${new Date().toISOString().split("T")[0]}.xlsx`
       );
     } catch (error) {
       toast.error("Error al exportar: " + error);
@@ -517,7 +521,7 @@ export default function UsersPage() {
       <div className="p-6 space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Gestión de Usuarios</h1>
+            <h1 className="text-3xl font-bold">Gestión de Estudiantes</h1>
             <p className="text-muted-foreground">
               Administración de estudiantes, coordinadores y datos del sistema
             </p>
@@ -545,7 +549,7 @@ export default function UsersPage() {
               }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Nuevo Usuario
+              Crear estudiante
             </Button>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -553,7 +557,8 @@ export default function UsersPage() {
                 className="rounded-xl"
                 onClick={handleClick}
               >
-                <Download className="w-4 h-4 mr-2" />
+                {/* CORREGIDO: Importar = Subir (Upload) */}
+                <Upload className="w-4 h-4 mr-2" />
                 Importar Excel
               </Button>
               <input
@@ -575,7 +580,8 @@ export default function UsersPage() {
                   </>
                 ) : (
                   <>
-                    <Upload className="w-4 h-4 mr-2" /> Exportar
+                    {/* CORREGIDO: Exportar = Descargar (Download) */}
+                    <Download className="w-4 h-4 mr-2" /> Exportar Excel
                   </>
                 )}
               </Button>
@@ -846,3 +852,4 @@ export default function UsersPage() {
     </>
   );
 }
+  

@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Clock, Calendar, Target, Layers } from "lucide-react";
+import { BookOpen, Calendar, Target, Layers } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -14,38 +14,44 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
 import { useProjects } from "@/hooks/use-projects";
 import { useHoursRecord } from "@/hooks/use-hours";
 import { useCarrera } from "@/hooks/use-carrera";
 import { useDepartament } from "@/hooks/use-departament";
+import { useInstitutions } from "@/hooks/use-institutions";
 
-// NOTA: Ya no usamos useAssignment aquí porque no carga datos globales.
-// Usaremos los datos extraídos de 'projects'.
+// Colores vibrantes (Tonos 500 de Tailwind) - Se ven bien en Light y Dark mode
+const COLORS = [
+  "#3b82f6", // Blue
+  "#10b981", // Emerald
+  "#f59e0b", // Amber
+  "#ef4444", // Red
+  "#8b5cf6", // Violet
+  "#ec4899", // Pink
+  "#06b6d4", // Cyan
+  "#f97316", // Orange
+];
 
 export default function DashboardPage() {
   // --- 1. HOOKS Y DATOS ---
   const { estudiantes } = useEstudiantes();
   const { projects } = useProjects();
+  const { institutions } = useInstitutions();
   const { hours } = useHoursRecord();
   const { carreras } = useCarrera();
   const { departaments } = useDepartament();
 
-  // --- 2. EXTRACCIÓN DE DATOS (PLAN B: SACAR ASIGNACIONES DE PROYECTOS) ---
-
-  // Esta lógica extrae todas las asignaciones que vienen anidadas dentro de los proyectos
-  // para poder contarlas globalmente.
+  // --- 2. EXTRACCIÓN DE DATOS  ---
   const allAssignments = useMemo(() => {
     if (!projects) return [];
-
     const listaPlana: any[] = [];
     projects.forEach((proyecto) => {
-      // Verificamos si el proyecto tiene la lista de asignaciones (Prisma include)
       if (proyecto.assignments && Array.isArray(proyecto.assignments)) {
         proyecto.assignments.forEach((assign: any) => {
           listaPlana.push({
-            // Normalizamos IDs: intentamos leer student_id O studentId
             student_id: assign.student_id ?? assign.studentId,
             project_id: proyecto.id,
             ...assign,
@@ -57,15 +63,10 @@ export default function DashboardPage() {
   }, [projects]);
 
   // --- 3. CÁLCULOS MEMORIZADOS ---
-
-  const activeStudents = useMemo(
-    () => estudiantes?.filter((s) => s.active === true) || [],
-    [estudiantes]
-  );
-
-  const activeProyects = useMemo(
-    () => projects?.filter((p) => p.active === true) || [],
-    [projects]
+  const totalProjects = useMemo(() => projects?.length || 0, [projects]);
+  const totalInstitutions = useMemo(
+    () => institutions?.length || 0,
+    [institutions]
   );
 
   // Proyectos creados este mes
@@ -76,7 +77,6 @@ export default function DashboardPage() {
     const currentYear = now.getFullYear();
 
     return projects.filter((p) => {
-      // Usamos start_date o createdAt
       const projectDate = new Date(p.start_date);
       return (
         projectDate.getMonth() === currentMonth &&
@@ -121,103 +121,86 @@ export default function DashboardPage() {
     [hours]
   );
 
-  // --- 4. CÁLCULOS COMPLEJOS (Cruces de datos) ---
+  // --- 4. CÁLCULOS COMPLEJOS ---
 
- // A. Proyectos y Estudiantes Atendidos por Carrera (CORREGIDO)
- const dataProyectosPorCarrera = useMemo(() => {
-  // Verificamos que existan las listas necesarias, incluyendo allAssignments
-  if (!carreras || !estudiantes || !projects || !allAssignments) return [];
+  // A. Proyectos y Estudiantes Atendidos por Carrera
+  const dataProyectosPorCarrera = useMemo(() => {
+    if (!carreras || !estudiantes || !projects || !allAssignments) return [];
 
-  // --- PRE-CÁLCULO: Mapa de Carreras por Proyecto ---
-  // Creamos un diccionario donde la clave es el ID del proyecto y el valor es un Set con los IDs de las carreras involucradas.
-  const projectCareersMap = new Map<string, Set<string>>();
+    const projectCareersMap = new Map<string, Set<string>>();
 
-  allAssignments.forEach((assign) => {
-    // Normalizamos IDs
-    const studentId = assign.student_id ?? assign.studentId;
-    const projectId = String(assign.project_id ?? assign.projectId);
+    allAssignments.forEach((assign) => {
+      const studentId = assign.student_id ?? assign.studentId;
+      const projectId = String(assign.project_id ?? assign.projectId);
+      const student = estudiantes.find(
+        (e) => String(e.id) === String(studentId)
+      );
 
-    // Buscamos al estudiante dueño de esta asignación para saber su carrera
-    const student = estudiantes.find((e) => String(e.id) === String(studentId));
+      if (student) {
+        const careerId =
+          student.career?.id ?? student.career?.id ?? student.career?.id;
 
-    if (student) {
-      // Obtenemos el ID de la carrera (manejando las variantes de tu tipo anterior)
-      // Prioridad: objeto nested (career.id) -> propiedad plana (career_id) -> propiedad camelCase (careerId)
-      const careerId = student.career?.id ?? student.career?.id ?? student.career?.id;
-
-      if (careerId) {
-        const careerIdStr = String(careerId);
-        
-        // Si el proyecto no está en el mapa, lo inicializamos
-        if (!projectCareersMap.has(projectId)) {
-          projectCareersMap.set(projectId, new Set());
+        if (careerId) {
+          const careerIdStr = String(careerId);
+          if (!projectCareersMap.has(projectId)) {
+            projectCareersMap.set(projectId, new Set());
+          }
+          projectCareersMap.get(projectId)?.add(careerIdStr);
         }
-        
-        // Agregamos la carrera al Set (el Set evita duplicados automáticamente)
-        projectCareersMap.get(projectId)?.add(careerIdStr);
-      }
-    }
-  });
-
-  // --- ITERACIÓN POR CARRERA ---
-  return carreras.map((carrera) => {
-    const carreraIdStr = String(carrera.id);
-
-    // --- PASO 1 y 2: Identificar estudiantes y asignaciones (Tu lógica original mantenida) ---
-    const idsEstudiantesDeCarrera = new Set();
-    estudiantes.forEach((e) => {
-      const idCarreraEstudiante = e.career?.id ?? e.career?.id ?? e.career?.id;
-      if (String(idCarreraEstudiante) === carreraIdStr) {
-        idsEstudiantesDeCarrera.add(String(e.id));
       }
     });
 
-    let totalParticipaciones = 0;
-    allAssignments.forEach((a) => {
-      const idEstudianteAsignado = a.student_id ?? a.studentId;
-      if (idEstudianteAsignado && idsEstudiantesDeCarrera.has(String(idEstudianteAsignado))) {
-        totalParticipaciones++;
-      }
+    return carreras.map((carrera) => {
+      const carreraIdStr = String(carrera.id);
+      const idsEstudiantesDeCarrera = new Set();
+      estudiantes.forEach((e) => {
+        const idCarreraEstudiante =
+          e.career?.id ?? e.career?.id ?? e.career?.id;
+        if (String(idCarreraEstudiante) === carreraIdStr) {
+          idsEstudiantesDeCarrera.add(String(e.id));
+        }
+      });
+
+      let totalParticipaciones = 0;
+      allAssignments.forEach((a) => {
+        const idEstudianteAsignado = a.student_id ?? a.studentId;
+        if (
+          idEstudianteAsignado &&
+          idsEstudiantesDeCarrera.has(String(idEstudianteAsignado))
+        ) {
+          totalParticipaciones++;
+        }
+      });
+
+      const proyectosCount = projects.filter((p) => {
+        const pId = String(p.id);
+        const careersInProject = projectCareersMap.get(pId);
+        if (careersInProject) {
+          return careersInProject.has(carreraIdStr);
+        }
+        return false;
+      }).length;
+
+      return {
+        departamento: carrera.name,
+        estudiantes: totalParticipaciones,
+        proyectos: proyectosCount,
+      };
     });
-
-    // --- PASO 3 (NUEVO): Contar proyectos usando el Mapa Pre-calculado ---
-    const proyectosCount = projects.filter((p) => {
-      const pId = String(p.id);
-      
-      // Obtenemos las carreras que participan en este proyecto específico
-      const careersInProject = projectCareersMap.get(pId);
-
-      // Si este proyecto tiene carreras registradas, verificamos si ESTA carrera es una de ellas
-      if (careersInProject) {
-        return careersInProject.has(carreraIdStr);
-      }
-      return false;
-    }).length;
-
-    return {
-      departamento: carrera.name,
-      estudiantes: totalParticipaciones,
-      proyectos: proyectosCount,
-    };
-  });
-}, [carreras, projects, estudiantes, allAssignments]);
+  }, [carreras, projects, estudiantes, allAssignments]);
 
   // B. Proyectos por Departamento Geográfico
   const dataProyectosPorDepto = useMemo(() => {
     return (
       departaments?.map((depto) => {
-        // 1. Filtramos proyectos de este departamento
         const proyectosEnDepto =
           projects?.filter((p: any) => {
-            // Soportamos district_id directo o district objeto anidado
             if (p.district?.departament_id)
               return String(p.district.departament_id) === String(depto.id);
-            return false; // Si no hay relación district cargada, no podemos saberlo
+            return false;
           }) || [];
 
-        // 2. Contamos asignaciones en esos proyectos
         const idsProyectosDepto = new Set(proyectosEnDepto.map((p) => p.id));
-
         const estudiantesAtendidos = allAssignments.filter((a) =>
           idsProyectosDepto.has(a.project_id)
         ).length;
@@ -225,7 +208,7 @@ export default function DashboardPage() {
         return {
           departamento: depto.name,
           proyectos: proyectosEnDepto.length,
-          estudiantes: estudiantesAtendidos, // Usamos asignaciones reales
+          estudiantes: estudiantesAtendidos,
         };
       }) || []
     );
@@ -235,29 +218,34 @@ export default function DashboardPage() {
   const dashboardData = useMemo(
     () => ({
       metrics: {
-        total_atendidos: allAssignments.length, // Usamos la longitud de la lista extraída
+        total_atendidos: allAssignments.length,
         total_estudiantes_unicos: estudiantes?.length || 0,
-        estudiantes_activos: activeStudents.length,
-        proyectos_activos: activeProyects.length,
+        instuticiones: totalInstitutions,
+        proyectos_totales: totalProjects,
         proyectos_nuevos_mes: proyectosNuevosMes,
         horas_completadas_total: totalHorasCompletadas,
         total_beneficiarios: totalBeneficiarios,
         promedio_avance: 68,
       },
 
-      estudiantes_por_año: [1, 2, 3, 4, 5].map((year) => ({
-        año: `${year}°`,
-        cantidad:
-          estudiantes?.filter((e) => e.career_year === year).length || 0,
-        completado:
-          estudiantes?.filter(
-            (e) =>
-              e.career_year === year &&
-              (Number(e.external_hours) || 0) +
-                (Number(e.internal_hours) || 0) >=
-                600
-          ).length || 0,
-      })),
+      // LÓGICA DE PROGRESO POR AÑO (CORREGIDA PARA SUMA TOTAL >= 600)
+      estudiantes_por_año: [1, 2, 3, 4, 5].map((year) => {
+        // 1. Obtener estudiantes de ese año
+        const studs = estudiantes?.filter((e) => e.career_year === year) || [];
+
+        // 2. Filtrar completados sumando ambas horas
+        const completados = studs.filter((s) => {
+          const internas = Number(s.internal_hours) || 0;
+          const externas = Number(s.external_hours) || 0;
+          return internas + externas >= 600;
+        }).length;
+
+        return {
+          año: `${year}°`,
+          cantidad: studs.length,
+          completado: completados,
+        };
+      }),
 
       horas_por_tipo: [
         { name: "Horas Internas", value: totalHorasInternas, color: "#3b82f6" },
@@ -265,15 +253,19 @@ export default function DashboardPage() {
       ],
 
       proyectos_por_carrera: dataProyectosPorCarrera,
-      proyectos_por_departamento: dataProyectosPorDepto,
+
+      // Filtramos departamentos con 0 proyectos
+      proyectos_por_departamento: dataProyectosPorDepto
+        .filter((d) => d.proyectos > 0)
+        .sort((a, b) => b.proyectos - a.proyectos),
     }),
     [
       estudiantes,
-      allAssignments, // Importante: dependencia actualizada
-      activeStudents,
-      activeProyects,
+      allAssignments,
+      totalProjects,
       proyectosNuevosMes,
       totalHorasCompletadas,
+      totalInstitutions,
       totalBeneficiarios,
       totalHorasInternas,
       totalHorasExternas,
@@ -283,6 +275,40 @@ export default function DashboardPage() {
   );
 
   const currentYear = new Date().getFullYear();
+
+  // Tooltip para PieChart (Carreras)
+  const CustomTooltipPie = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white dark:bg-slate-950 border rounded-lg p-3 shadow-lg text-sm">
+          <p className="font-bold mb-1">{data.departamento}</p>
+          <p className="text-blue-500">🔹 {data.proyectos} Proyectos</p>
+          <p className="text-gray-500">👥 {data.estudiantes} Estudiantes</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Tooltip para BarChart (Departamentos)
+  const CustomTooltipBar = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white dark:bg-slate-950 border rounded-lg p-3 shadow-lg text-sm">
+          <p className="font-bold mb-1">{label}</p>
+          <p className="font-semibold" style={{ color: data.fill }}>
+            🏗️ {data.proyectos} Proyectos
+          </p>
+          <p className="text-gray-500 text-xs">
+            👥 {data.estudiantes} Estudiantes asignados
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -304,13 +330,11 @@ export default function DashboardPage() {
       </div>
 
       {/* Métricas principales */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* CARD: ESTUDIANTES ATENDIDOS (Asignaciones) */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* CARD: ESTUDIANTES */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Estudiantes Atendidos
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Estudiantes</CardTitle>
             <Layers className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -323,17 +347,15 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* CARD: PROYECTOS ACTIVOS */}
+        {/* CARD: PROYECTOS */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Proyectos Activos
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Proyectos</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {dashboardData.metrics.proyectos_activos}
+              {dashboardData.metrics.proyectos_totales}
             </div>
             <p className="text-xs text-muted-foreground">
               <span className="text-blue-600 font-semibold">
@@ -344,51 +366,25 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* CARD: ESTUDIANTES ACTIVOS (Universo) */}
+        {/* CARD: INSTITUCIONES */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Estudiantes Activos
+              Total de instituciones
             </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {dashboardData.metrics.estudiantes_activos.toLocaleString()}
+              {dashboardData.metrics.instuticiones.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round(
-                (dashboardData.metrics.estudiantes_activos /
-                  (dashboardData.metrics.total_estudiantes_unicos || 1)) *
-                  100
-              )}
-              % del universo total
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* CARD: HORAS COMPLETADAS */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Horas Completadas
-            </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {dashboardData.metrics.horas_completadas_total.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Promedio: {dashboardData.metrics.promedio_avance}% completado
-            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Gráficos principales */}
+      {/* Gráficos Secundarios */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Estudiantes por año */}
+        {/* GRÁFICO BARRAS: PROGRESO POR AÑO */}
         <Card>
           <CardHeader>
             <CardTitle>Progreso por Año Académico</CardTitle>
@@ -396,26 +392,35 @@ export default function DashboardPage() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={dashboardData.estudiantes_por_año}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="año" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip
+                  cursor={{ fill: "transparent" }}
+                  contentStyle={{
+                    borderRadius: "8px",
+                    backgroundColor: "#fff",
+                  }}
+                />
                 <Bar
                   dataKey="cantidad"
                   fill="#3b82f6"
+                  radius={[4, 4, 0, 0]}
                   name="Total Estudiantes"
+                  label={{ position: "top" }}
                 />
-                <Bar
+                {/* <Bar
                   dataKey="completado"
                   fill="#10b981"
+                  radius={[4, 4, 0, 0]}
                   name="Horas Completadas"
-                />
+                /> */}
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Distribución de horas */}
+        {/* GRÁFICO PASTEL: HORAS POR TIPO */}
         <Card>
           <CardHeader>
             <CardTitle>Distribución de Horas por Tipo</CardTitle>
@@ -446,62 +451,101 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Proyectos por carrera y por departamento */}
+      {/* ZONA DE DETALLES (CARRERAS Y DEPARTAMENTOS) */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        {/* GRÁFICO 1: DONA (CARRERAS) */}
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Proyectos por Carrera</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-              {dashboardData.proyectos_por_carrera.map((dept, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium">{dept.departamento}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {dept.estudiantes} atendidos
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={dept.proyectos > 0 ? "secondary" : "outline"}
+          <CardContent className="flex-1 pb-0">
+            <div className="h-[300px] w-full">
+              {dashboardData.proyectos_por_carrera.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={dashboardData.proyectos_por_carrera}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="proyectos"
+                      nameKey="departamento"
                     >
-                      {dept.proyectos} proyectos
-                    </Badge>
-                  </div>
+                      {dashboardData.proyectos_por_carrera.map(
+                        (entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                            strokeWidth={0}
+                          />
+                        )
+                      )}
+                    </Pie>
+                    <Tooltip content={<CustomTooltipPie />} />
+                    <Legend
+                      layout="horizontal"
+                      verticalAlign="bottom"
+                      align="center"
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  No hay datos para mostrar
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* GRÁFICO 2: BARRAS VERTICALES (DEPARTAMENTOS) */}
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Proyectos por Departamento</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-              {dashboardData.proyectos_por_departamento.map((dept, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium">{dept.departamento}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {dept.estudiantes} atendidos
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      {dept.proyectos} proyectos
-                    </Badge>
-                  </div>
+          <CardContent className="flex-1 pb-0">
+            <div className="h-[300px] w-full">
+              {dashboardData.proyectos_por_departamento.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={dashboardData.proyectos_por_departamento}
+                    margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="departamento"
+                      tick={{ fontSize: 12 }}
+                      interval={0}
+                      angle={-20}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis />
+                    <Tooltip
+                      content={<CustomTooltipBar />}
+                      cursor={{ fill: "transparent" }}
+                    />
+                    <Bar dataKey="proyectos" radius={[4, 4, 0, 0]} barSize={40}>
+                      {dashboardData.proyectos_por_departamento.map(
+                        (entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
+                        )
+                      )}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  No hay datos geográficos
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>

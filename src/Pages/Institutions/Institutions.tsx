@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Target, Trash2, FilePenLine } from "lucide-react";
 import { useInstitutions } from "@/hooks/use-institutions";
 import Spinner from "@/components/Spinner";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -7,7 +7,7 @@ import type { InstitutionType } from "@/Types/InstitutionType";
 import { InstitutionSchema } from "@/Types/InstitutionType";
 import { useTable } from "@/hooks/useTable";
 import TableStructure from "@/components/TableStructure";
-import { Trash2, FilePenLine } from "lucide-react";
+// Nota: Ya no necesitamos importar Card, CardContent, etc. porque usaremos un diseño custom más ligero
 import GeneralAlert from "@/components/GeneralAlert";
 import { useCallback, useState, useEffect } from "react";
 import { Toaster } from "sonner";
@@ -66,7 +66,7 @@ export default function Institutions() {
 
   useEffect(() => {
     const subscription = form.watch((value) => {
-      setIdDepartment(value.departament_id ?? 0); // Si es undefined, usa 0
+      setIdDepartment(value.departament_id ?? 0);
     });
     return () => subscription.unsubscribe();
   }, [form]);
@@ -164,8 +164,9 @@ export default function Institutions() {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
-            className="cursor-pointer"
+            variant="ghost"
+            size="icon"
+            className="cursor-pointer hover:bg-muted"
             onClick={() => {
               const district_id = row.original.district?.id ?? 0;
               const departament_id = row.original.district?.departament_id ?? 0;
@@ -181,14 +182,15 @@ export default function Institutions() {
               );
             }}
           >
-            <FilePenLine className="w-4 h-4" />
+            <FilePenLine className="w-4 h-4 text-blue-600" />
           </Button>
           <Button
-            variant="outline"
-            className="cursor-pointer"
+            variant="ghost"
+            size="icon"
+            className="cursor-pointer hover:bg-muted"
             onClick={() => openDialogDelete(row.original.id)}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-4 h-4 text-red-600" />
           </Button>
         </div>
       ),
@@ -215,34 +217,59 @@ export default function Institutions() {
     <>
       {loading && <Spinner />}
       <div className="p-6 space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        {/* HEADER RE-DISEÑADO COMPACTO */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between border-b pb-4">
+          {/* IZQUIERDA: Título */}
           <div>
-            <h1 className="text-3xl font-bold">Gestión de instituciones</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Gestión de Instituciones
+            </h1>
+            <p className="text-muted-foreground mt-1">
               Administrar las instituciones de la plataforma.
             </p>
           </div>
-          <Button
-            className="rounded-md shadow-sm cursor-pointer"
-            onClick={() => {
-              setOpen(true);
-              setActiveEdit(false);
-              form.reset({
-                id: 0,
-                name: "",
-                email: "",
-                address: "",
-                phone: "",
-                district_id: undefined,
-                departament_id: undefined,
-              });
-            }}
-          >
-            <Plus className="w-4 h-4" />
-            Nueva institución
-          </Button>
+
+          {/* DERECHA: Métricas y Botón */}
+          <div className="flex items-center gap-4">
+            {/* Mini Card de Métricas (Horizontal) */}
+            <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-muted/30 rounded-lg border">
+              <div className="p-2 bg-background rounded-full shadow-sm">
+                <Target className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Cantidad total de instituciones
+                </span>
+                <span className="text-xl font-bold leading-none">
+                  {institutions?.length || 0}
+                </span>
+              </div>
+            </div>
+
+            {/* Botón Principal */}
+            <Button
+              className="h-10 px-4 shadow-sm cursor-pointer"
+              onClick={() => {
+                setOpen(true);
+                setActiveEdit(false);
+                form.reset({
+                  id: 0,
+                  name: "",
+                  email: "",
+                  address: "",
+                  phone: "",
+                  district_id: undefined,
+                  departament_id: undefined,
+                });
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva institución
+            </Button>
+          </div>
         </div>
 
+        {/* DIALOGO / MODAL */}
         <Dialog
           open={open}
           onOpenChange={(isOpen) => {
@@ -259,7 +286,7 @@ export default function Institutions() {
             }
           }}
         >
-          <DialogContent>
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>
                 {activeEdit ? "Editar Institución" : "Nueva Institución"}
@@ -273,7 +300,7 @@ export default function Institutions() {
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(insertInstitution)}>
-                <div className="space-y-8">
+                <div className="space-y-8 py-4">
                   <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                     <div className="flex flex-col">
                       <FormTextField
@@ -281,11 +308,9 @@ export default function Institutions() {
                         type="number"
                         nameField="id"
                         label="ID"
-                        placeholder="Ingrese el ID de la institución"
-                        readOnly={activeEdit}
-                        className={
-                          activeEdit ? "bg-gray-100 cursor-not-allowed" : ""
-                        }
+                        placeholder="Generado automáticamente"
+                        readOnly={true} // Siempre readonly, usualmente es autoincremental
+                        className="bg-muted cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -355,11 +380,16 @@ export default function Institutions() {
                     </div>
                   </div>
                 </div>
-                <div className="w-full flex justify-center">
-                  <Button type="submit" className="mt-4">
-                    {activeEdit
-                      ? "Actualizar Institución"
-                      : "Nueva Institución"}
+                <div className="w-full flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => setOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    {activeEdit ? "Guardar cambios" : "Crear Institución"}
                   </Button>
                 </div>
               </form>
@@ -374,12 +404,13 @@ export default function Institutions() {
           table={table}
         />
       </div>
+
       <GeneralAlert
         title="¿Estás seguro de eliminar esta institución?"
-        description="Esta acción no se puede deshacer."
+        description="Esta acción no se puede deshacer y podría afectar proyectos asociados."
         openAlert={openAlertDelete}
         setOpenAlert={setOpenAlertDelete}
-        confirmText="Confirmar"
+        confirmText="Sí, eliminar"
         onConfirm={() => confirmDelete()}
         onCancel={() => cancelDelete()}
       />
