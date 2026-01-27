@@ -474,7 +474,7 @@ export default function DashboardPage() {
                       nameKey="departamento"
                     >
                       {dashboardData.proyectos_por_carrera.map(
-                        (entry, index) => (
+                        (_, index) => (
                           <Cell
                             key={`cell-${index}`}
                             fill={COLORS[index % COLORS.length]}
@@ -531,7 +531,7 @@ export default function DashboardPage() {
                     />
                     <Bar dataKey="proyectos" radius={[4, 4, 0, 0]} barSize={40}>
                       {dashboardData.proyectos_por_departamento.map(
-                        (entry, index) => (
+                        (_entry, index) => (
                           <Cell
                             key={`cell-${index}`}
                             fill={COLORS[index % COLORS.length]}
