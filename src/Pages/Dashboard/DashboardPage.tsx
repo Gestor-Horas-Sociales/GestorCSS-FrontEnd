@@ -335,9 +335,6 @@ export default function DashboardPage() {
               <div className="text-2xl font-bold text-blue-600">
                 {dashboardData.metrics.total_estudiantes_unicos.toLocaleString()}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Total de asignaciones a proyectos
-              </p>
             </CardContent>
           </Card>
 
