@@ -21,7 +21,6 @@ import {
   MapPin,
   Award,
   BookOpen,
-  Clock,
   Activity,
   Download,
   Building2,
@@ -44,7 +43,6 @@ import {
 import { useCarrera } from "@/hooks/use-carrera";
 import { useDepartament } from "@/hooks/use-departament";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
-import { useHoursRecord } from "@/hooks/use-hours";
 import { useProjects } from "@/hooks/use-projects";
 import { useInstitutions } from "@/hooks/use-institutions"; // Asegúrate de importar esto
 
@@ -84,7 +82,6 @@ export default function ReportsPage() {
   // Hooks de datos
   const { estudiantes, loading } = useEstudiantes();
   const { projects } = useProjects();
-  const { hours } = useHoursRecord();
   const { carreras } = useCarrera();
   const { departaments } = useDepartament();
   const { institutions } = useInstitutions(); // Nuevo hook
@@ -499,7 +496,7 @@ export default function ReportsPage() {
                         radius={[4, 4, 0, 0]}
                         barSize={40}
                       >
-                        {dataPorDepto.map((entry, index) => (
+                        {dataPorDepto.map((_, index) => (
                           <Cell
                             key={`cell-${index}`}
                             fill={COLORS[index % COLORS.length]}
