@@ -44,7 +44,7 @@ import { useCarrera } from "@/hooks/use-carrera";
 import { useDepartament } from "@/hooks/use-departament";
 import { useEstudiantes } from "@/hooks/use-estudiantes";
 import { useProjects } from "@/hooks/use-projects";
-import { useInstitutions } from "@/hooks/use-institutions"; // Asegúrate de importar esto
+import { useInstitutions } from "@/hooks/use-institutions";
 
 // API
 import {
@@ -54,10 +54,11 @@ import {
   downloadCareerReport,
 } from "@/api/reports";
 
+// Componentes UI
 import { Combobox } from "@/components/ui/combobox";
 import Spinner from "@/components/Spinner";
 
-// Paleta de colores vibrante
+// Paleta de colores
 const COLORS = [
   "#3b82f6", // Azul
   "#10b981", // Esmeralda
@@ -68,12 +69,32 @@ const COLORS = [
   "#ec4899", // Rosa
 ];
 
+// --- COMPONENTE TOOLTIP ---
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const CustomTooltipBar = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white dark:bg-slate-950 border rounded-lg p-3 shadow-lg text-sm z-50">
+        <p className="font-bold mb-1">{label}</p>
+        <p className="font-semibold" style={{ color: data.fill }}>
+          🏗️ {data.proyectos} Proyectos
+        </p>
+        <p className="text-gray-500 text-xs">
+          👥 {data.estudiantes || 0} Estudiantes asignados
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function ReportsPage() {
   // 1. AÑO ACTUAL POR DEFECTO
   const currentYear = new Date().getFullYear();
   const [selectedPeriod, setSelectedPeriod] = useState(currentYear.toString());
 
-  // Estados Combobox y Carga
+  // Estados
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedCareerId, setSelectedCareerId] = useState<string>("");
@@ -84,22 +105,67 @@ export default function ReportsPage() {
   const { projects } = useProjects();
   const { carreras } = useCarrera();
   const { departaments } = useDepartament();
-  const { institutions } = useInstitutions(); // Nuevo hook
+  const { institutions } = useInstitutions();
 
   // --- GENERAR LISTA DE AÑOS ---
   const availableYears = useMemo(() => {
     return Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
   }, [currentYear]);
 
-  // --- MÉTRICAS GENERALES (TOTALES) ---
-  // Ya no filtramos por "activos", mostramos totales del sistema o del año según corresponda
+  // --- MÉTRICAS GENERALES ---
   const totalProyectos = projects?.length || 0;
   const totalInstituciones = institutions?.length || 0;
 
+  // --- LÓGICA DE DATOS PARA GRÁFICOS ---
 
-  // --- DATOS PARA GRÁFICOS ---
+  // 1. Aplanar asignaciones (Necesario para tu código)
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const allAssignments = useMemo(() => {
+    if (!projects) return [];
+    const listaPlana: any[] = [];
+    projects.forEach((proyecto) => {
+      if (proyecto.assignments && Array.isArray(proyecto.assignments)) {
+        proyecto.assignments.forEach((assign: any) => {
+          listaPlana.push({
+            student_id: assign.student_id ?? assign.studentId,
+            project_id: proyecto.id,
+            ...assign,
+          });
+        });
+      }
+    });
+    return listaPlana;
+  }, [projects]);
 
-  // 1. Estudiantes por Año Académico (Filtrado por año seleccionado si lo deseas, o general)
+  // 2. Proyectos por Departamento (TU CÓDIGO REPLICADO EXACTAMENTE)
+  const dataPorDepto = useMemo(() => {
+    return (
+      departaments?.map((depto) => {
+        const proyectosEnDepto =
+          projects?.filter((p: any) => {
+            if (p.district?.departament_id)
+              return String(p.district.departament_id) === String(depto.id);
+            return false;
+          }) || [];
+
+        const idsProyectosDepto = new Set(proyectosEnDepto.map((p) => p.id));
+        const estudiantesAtendidos = allAssignments.filter((a) =>
+          idsProyectosDepto.has(a.project_id)
+        ).length;
+
+        return {
+          departamento: depto.name,
+          proyectos: proyectosEnDepto.length,
+          estudiantes: estudiantesAtendidos,
+        };
+      }) || []
+    )
+      // Agrego estos filtros para que el gráfico no muestre espacios vacíos
+      .filter((d) => d.proyectos > 0)
+      .sort((a, b) => b.proyectos - a.proyectos);
+  }, [departaments, projects, allAssignments]);
+
+  // 3. Estudiantes por Año Académico
   const dataPorAno = [1, 2, 3, 4, 5].map((year) => ({
     año: `${year}° Año`,
     total: estudiantes?.filter((e) => e.career_year === year).length || 0,
@@ -112,26 +178,7 @@ export default function ReportsPage() {
       ).length || 0,
   }));
 
-  // 2. Proyectos por Departamento (BARRAS VERTICALES)
-  // Filtramos departamentos con 0 proyectos para limpiar el gráfico
-  const dataPorDepto =
-    departaments
-      ?.map((depto) => {
-        // Contamos proyectos históricos por departamento
-        const count =
-          projects?.filter(
-            (p) => 
-              p.district_id === depto.id
-          ).length || 0;
-        return {
-          departamento: depto.name, // Key para XAxis
-          proyectos: count,
-        };
-      })
-      .filter((d) => d.proyectos > 0)
-      .sort((a, b) => b.proyectos - a.proyectos) || [];
-
-  // 3. Progreso por Carrera
+  // 4. Progreso por Carrera
   const dataPorCarrera =
     carreras?.map((carrera) => {
       const studentsInCareer =
@@ -248,7 +295,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* 1. SECCIÓN DE REPORTERÍA (MOVIDO ARRIBA) */}
+        {/* 1. SECCIÓN DE REPORTERÍA */}
         <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
           {/* Memoria Anual */}
           <ReportGeneratorCard
@@ -282,7 +329,7 @@ export default function ReportsPage() {
               value={selectedStudentId}
               onChange={setSelectedStudentId}
               placeholder="Buscar estudiante..."
-              searchPlaceholder="Nombre/Carnet..."
+              searchPlaceholder="Nombre..."
               emptyText="Sin resultados."
             />
           </ReportGeneratorCard>
@@ -391,7 +438,11 @@ export default function ReportsPage() {
                     barSize={20}
                     fill="#e2e8f0"
                     radius={[0, 4, 4, 0]}
-                    label={{ position: "right", fill: "#94a3b8", fontSize: 12 }}
+                    label={{
+                      position: "right",
+                      fill: "#94a3b8",
+                      fontSize: 12,
+                    }}
                   />
                   <Bar
                     dataKey="completados"
@@ -399,7 +450,11 @@ export default function ReportsPage() {
                     barSize={20}
                     fill="#3b82f6"
                     radius={[0, 4, 4, 0]}
-                    label={{ position: "right", fill: "#3b82f6", fontSize: 12 }}
+                    label={{
+                      position: "right",
+                      fill: "#3b82f6",
+                      fontSize: 12,
+                    }}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -455,48 +510,40 @@ export default function ReportsPage() {
           </Card>
         </div>
 
-        {/* 4. GRÁFICO DE DEPARTAMENTOS (BARRAS VERTICALES) */}
-        <div className="grid gap-6 grid-cols-2">
-          <Card className="shadow-sm">
+        {/* 4. GRÁFICO DE DEPARTAMENTOS (REPLICADO) */}
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+          <Card className="flex flex-col min-w-0">
             <CardHeader>
               <CardTitle>Proyectos por Departamento</CardTitle>
-              <CardDescription>
-                Distribución geográfica de los proyectos
-              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 pb-4">
               <div className="h-[300px] w-full">
                 {dataPorDepto.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={dataPorDepto}
-                      margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                      margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
                     >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        opacity={0.3}
-                      />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis
                         dataKey="departamento"
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 10 }}
                         interval={0}
-                        angle={-15}
+                        angle={-20}
                         textAnchor="end"
                         height={60}
                       />
-                      <YAxis axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip
+                        content={<CustomTooltipBar />}
                         cursor={{ fill: "transparent" }}
-                        contentStyle={{ borderRadius: "8px" }}
                       />
                       <Bar
                         dataKey="proyectos"
-                        name="Proyectos"
                         radius={[4, 4, 0, 0]}
                         barSize={40}
                       >
-                        {dataPorDepto.map((_, index) => (
+                        {dataPorDepto.map((_entry, index) => (
                           <Cell
                             key={`cell-${index}`}
                             fill={COLORS[index % COLORS.length]}
@@ -507,7 +554,7 @@ export default function ReportsPage() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-full flex items-center justify-center text-muted-foreground">
-                    No hay datos geográficos disponibles.
+                    No hay datos geográficos
                   </div>
                 )}
               </div>
