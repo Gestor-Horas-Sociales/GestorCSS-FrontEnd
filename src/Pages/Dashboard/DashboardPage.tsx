@@ -61,6 +61,7 @@ export default function DashboardPage() {
     });
     return listaPlana;
   }, [projects]);
+  
 
   // --- 3. CÁLCULOS MEMORIZADOS ---
   const totalProjects = useMemo(() => projects?.length || 0, [projects]);
@@ -339,7 +340,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {dashboardData.metrics.total_atendidos.toLocaleString()}
+              {dashboardData.metrics.total_estudiantes_unicos.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
               Total de asignaciones a proyectos
