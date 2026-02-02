@@ -119,7 +119,7 @@ export default function UsersPage() {
       active: boolean,
       internal_hours: number,
       external_hours: number,
-      career: { id: number; name: string } | null
+      career: { id: number; name: string } | null,
     ) => {
       setOpen(true);
       setActiveEdit(true);
@@ -140,7 +140,7 @@ export default function UsersPage() {
           : { career_id: 1, career_name: "" },
       });
     },
-    [form, setOpen, setActiveEdit]
+    [form, setOpen, setActiveEdit],
   );
 
   // Columnas de la tabla MODIFICADAS (ÍCONOS BONITOS)
@@ -193,40 +193,69 @@ export default function UsersPage() {
         id: "progress",
         header: "Progreso",
         cell: ({ row }) => {
-          const { horasCompletadas, horasRequeridas } = calcularHoras(
-            row.original
+          const { horasRequeridas } = calcularHoras(row.original);
+
+          const internalHours = row.original.internal_hours || 0;
+          const externalHours = row.original.external_hours || 0;
+
+          // Cálculos de porcentajes individuales
+          const internalPercentage =
+            horasRequeridas > 0 ? (internalHours / horasRequeridas) * 100 : 0;
+
+          const externalPercentage =
+            horasRequeridas > 0 ? (externalHours / horasRequeridas) * 100 : 0;
+
+          // Porcentaje total
+          const totalPercentage = Math.round(
+            internalPercentage + externalPercentage,
           );
-
-          // Cálculo porcentaje real (>100% permitido)
-          const realPercentage =
-            horasRequeridas > 0
-              ? Math.round((horasCompletadas / horasRequeridas) * 100)
-              : 0;
-
-          const isOverAchieved = realPercentage > 100;
+          const isOverAchieved = totalPercentage >= 100;
 
           return (
             <div className="space-y-1 min-w-[140px]">
+              {/* TEXTO SUPERIOR: Desglose de horas por color */}
               <div className="flex justify-between text-xs font-medium">
-                <span className="text-muted-foreground">
-                  {horasCompletadas} / {horasRequeridas} hrs
-                </span>
+                <div className="flex gap-2">
+                  {/* Texto Azul: Horas Internas */}
+                  <span className="text-blue-600 font-semibold">
+                    {internalHours}h Int.
+                  </span>
+                  {/* Separador */}
+                  <span className="text-muted-foreground/40">|</span>
+                  {/* Texto Verde: Horas Externas */}
+                  <span className="text-emerald-600 font-semibold">
+                    {externalHours}h Ext.
+                  </span>
+                </div>
+
+                {/* Porcentaje Total a la derecha */}
                 <span
                   className={
                     isOverAchieved
-                      ? "text-green-600 font-bold"
+                      ? "text-emerald-600 font-bold"
                       : "text-foreground"
                   }
                 >
-                  {realPercentage}%
+                  {totalPercentage}%
                 </span>
               </div>
-              <Progress
-                value={realPercentage}
-                className={`h-2 ${
-                  isOverAchieved ? "[&>div]:bg-green-500" : ""
-                }`}
-              />
+
+              {/* BARRA DE PROGRESO */}
+              <div
+                className="h-2 w-full bg-secondary rounded-full overflow-hidden flex relative"
+                title={`Meta: ${horasRequeridas} horas`}
+              >
+                {/* Parte Azul */}
+                <div
+                  className="bg-blue-500 h-full transition-all duration-500"
+                  style={{ width: `${internalPercentage}%` }}
+                />
+                {/* Parte Verde */}
+                <div
+                  className="bg-emerald-500 h-full transition-all duration-500"
+                  style={{ width: `${externalPercentage}%` }}
+                />
+              </div>
             </div>
           );
         },
@@ -259,7 +288,7 @@ export default function UsersPage() {
                         id: row.original.career.id,
                         name: row.original.career.name,
                       }
-                    : null
+                    : null,
                 )
               }
             >
@@ -279,7 +308,7 @@ export default function UsersPage() {
         ),
       },
     ],
-    [calcularHoras, editEstudiante, openDialogDelete]
+    [calcularHoras, editEstudiante, openDialogDelete],
   );
 
   const { globalFilter, setGlobalFilter, table } = useTable({
@@ -315,7 +344,7 @@ export default function UsersPage() {
         errors = [],
       } = response ?? {};
       toast.success(
-        `📥 Importación completada: ✔ ${created} creados, 🔄 ${updated} actualizados, ❌ ${rejected} rechazados`
+        `📥 Importación completada: ✔ ${created} creados, 🔄 ${updated} actualizados, ❌ ${rejected} rechazados`,
       );
       if (errors.length > 0) console.warn("Errores:", errors);
       await getAllStudents();
@@ -352,7 +381,7 @@ export default function UsersPage() {
           external_hours: Number(row["Horas externas"] ?? 0),
         }));
         const validRows = formattedData.filter(
-          (s) => s.card && s.name && s.lastName
+          (s) => s.card && s.name && s.lastName,
         );
         if (validRows.length > 0) {
           setTotalRows(validRows.length);
@@ -386,7 +415,7 @@ export default function UsersPage() {
           external_hours: Number(row["Horas externas"] ?? 0),
         }));
         const validRows = formattedData.filter(
-          (s) => s.card && s.name && s.lastName
+          (s) => s.card && s.name && s.lastName,
         );
         if (validRows.length > 0) {
           setTotalRows(validRows.length);
@@ -495,7 +524,7 @@ export default function UsersPage() {
       XLSX.utils.book_append_sheet(workbook, worksheet, "Estudiantes");
       XLSX.writeFile(
         workbook,
-        `estudiantes_${new Date().toISOString().split("T")[0]}.xlsx`
+        `estudiantes_${new Date().toISOString().split("T")[0]}.xlsx`,
       );
     } catch (error) {
       toast.error("Error al exportar: " + error);
@@ -593,6 +622,18 @@ export default function UsersPage() {
                 <FileText className="w-4 h-4 mr-2" />
                 Plantillas
               </Button>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs font-medium bg-secondary/50 p-2 rounded-lg border border-border">
+              <span className="text-muted-foreground mr-1">Leyenda:</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm" />
+                <span>Internas</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm" />
+                <span>Externas</span>
+              </div>
             </div>
           </div>
         </div>
@@ -852,4 +893,3 @@ export default function UsersPage() {
     </>
   );
 }
-  
