@@ -379,7 +379,7 @@ export default function ReportsPage() {
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
           <KpiCard
             title="Total Estudiantes"
-            value={estudiantes?.length || 0}
+            value={allAssignments?.length || 0}
             icon={Users}
             color="text-blue-600"
             bg="bg-blue-100 dark:bg-blue-900/20"

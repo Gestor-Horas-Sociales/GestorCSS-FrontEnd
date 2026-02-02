@@ -333,7 +333,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {dashboardData.metrics.total_estudiantes_unicos.toLocaleString()}
+                {dashboardData.metrics.total_atendidos.toLocaleString()}
               </div>
             </CardContent>
           </Card>
