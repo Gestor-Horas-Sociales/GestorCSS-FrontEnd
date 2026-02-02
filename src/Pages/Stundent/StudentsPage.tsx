@@ -193,64 +193,67 @@ export default function UsersPage() {
         id: "progress",
         header: "Progreso",
         cell: ({ row }) => {
-          const { horasRequeridas } = calcularHoras(row.original);
+          const { horasCompletadas, horasRequeridas } = calcularHoras(
+            row.original,
+          );
 
           const internalHours = row.original.internal_hours || 0;
           const externalHours = row.original.external_hours || 0;
 
-          // Cálculos de porcentajes individuales
           const internalPercentage =
             horasRequeridas > 0 ? (internalHours / horasRequeridas) * 100 : 0;
-
           const externalPercentage =
             horasRequeridas > 0 ? (externalHours / horasRequeridas) * 100 : 0;
 
-          // Porcentaje total
           const totalPercentage = Math.round(
             internalPercentage + externalPercentage,
           );
           const isOverAchieved = totalPercentage >= 100;
 
           return (
-            <div className="space-y-1 min-w-[140px]">
-              {/* TEXTO SUPERIOR: Desglose de horas por color */}
-              <div className="flex justify-between text-xs font-medium">
-                <div className="flex gap-2">
-                  {/* Texto Azul: Horas Internas */}
-                  <span className="text-blue-600 font-semibold">
+            <div className="space-y-1">
+              {/* TEXTO SUPERIOR */}
+              <div className="flex justify-between items-end text-xs font-medium">
+                {/* IZQUIERDA: Desglose por color */}
+                <div className="flex gap-2 text-[11px]">
+                  <span
+                    className="text-blue-600 font-semibold"
+                    title="Horas Internas"
+                  >
                     {internalHours}h Int.
                   </span>
-                  {/* Separador */}
                   <span className="text-muted-foreground/40">|</span>
-                  {/* Texto Verde: Horas Externas */}
-                  <span className="text-emerald-600 font-semibold">
+                  <span
+                    className="text-emerald-600 font-semibold"
+                    title="Horas Externas"
+                  >
                     {externalHours}h Ext.
                   </span>
                 </div>
 
-                {/* Porcentaje Total a la derecha */}
-                <span
-                  className={
-                    isOverAchieved
-                      ? "text-emerald-600 font-bold"
-                      : "text-foreground"
-                  }
-                >
-                  {totalPercentage}%
-                </span>
+                {/* DERECHA: Total / Meta y Porcentaje */}
+                <div className="flex items-center gap-1.5 text-right">
+                  <span className="text-muted-foreground text-[11px]">
+                    {horasCompletadas} / {horasRequeridas} hrs
+                  </span>
+                  <span
+                    className={
+                      isOverAchieved
+                        ? "text-emerald-600 font-bold"
+                        : "text-foreground font-bold"
+                    }
+                  >
+                    ({totalPercentage}%)
+                  </span>
+                </div>
               </div>
 
               {/* BARRA DE PROGRESO */}
-              <div
-                className="h-2 w-full bg-secondary rounded-full overflow-hidden flex relative"
-                title={`Meta: ${horasRequeridas} horas`}
-              >
-                {/* Parte Azul */}
+              <div className="h-2 w-full bg-secondary rounded-full overflow-hidden flex relative">
                 <div
                   className="bg-blue-500 h-full transition-all duration-500"
                   style={{ width: `${internalPercentage}%` }}
                 />
-                {/* Parte Verde */}
                 <div
                   className="bg-emerald-500 h-full transition-all duration-500"
                   style={{ width: `${externalPercentage}%` }}
