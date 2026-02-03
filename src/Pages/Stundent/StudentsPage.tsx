@@ -494,7 +494,7 @@ export default function UsersPage() {
     }
   }, [studentCard, form, emailValue]);
   // --------------------------------------------------------
-
+  
   const exportToExcel = async () => {
     if (!estudiantes || estudiantes.length === 0) {
       toast.error("No hay datos para exportar");
@@ -518,11 +518,24 @@ export default function UsersPage() {
           Correo: e.email ?? "",
           "Horas internas": internas,
           "Horas externas": externas,
-          "Total Horas": internas + externas,
+          "Total Horas": 0,
         };
       });
 
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
+
+      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        const rowNum = R + 1;
+        const totalCellAddress = XLSX.utils.encode_cell({ r: R, c: 9 });
+
+        if (!worksheet[totalCellAddress])
+          worksheet[totalCellAddress] = { t: "n" };
+
+        worksheet[totalCellAddress].f = `H${rowNum}+I${rowNum}`;
+        delete worksheet[totalCellAddress].v;
+      }
+
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Estudiantes");
       XLSX.writeFile(
@@ -530,6 +543,7 @@ export default function UsersPage() {
         `estudiantes_${new Date().toISOString().split("T")[0]}.xlsx`,
       );
     } catch (error) {
+      console.error(error);
       toast.error("Error al exportar: " + error);
     } finally {
       setExporting(false);
@@ -589,8 +603,7 @@ export default function UsersPage() {
                 className="rounded-xl"
                 onClick={handleClick}
               >
-                {/* CORREGIDO: Importar = Subir (Upload) */}
-                <Upload className="w-4 h-4 mr-2" />
+                <Download className="w-4 h-4 mr-2" />
                 Importar Excel
               </Button>
               <input
@@ -612,8 +625,7 @@ export default function UsersPage() {
                   </>
                 ) : (
                   <>
-                    {/* CORREGIDO: Exportar = Descargar (Download) */}
-                    <Download className="w-4 h-4 mr-2" /> Exportar Excel
+                    <Upload className="w-4 h-4 mr-2" /> Exportar Excel
                   </>
                 )}
               </Button>
