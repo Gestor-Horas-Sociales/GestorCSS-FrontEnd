@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,6 +52,25 @@ export default function TableStructure<T, R>({
               .getAllColumns()
               .filter((column) => column.getCanHide())
               .map((column) => {
+                // Obtener el nombre del header
+                const header = column.columnDef.header;
+                let headerText: string;
+                
+                if (typeof header === "function") {
+                  const headerResult = header({} as any);
+                  headerText = typeof headerResult === "string" 
+                    ? headerResult 
+                    : column.id;
+                } else if (typeof header === "string") {
+                  headerText = header;
+                } else {
+                  // Fallback: formatear el ID de la columna
+                  headerText = column.id
+                    .split("_")
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(" ");
+                }
+
                 return (
                   <DropdownMenuCheckboxItem
                     key={column.id}
@@ -60,6 +80,7 @@ export default function TableStructure<T, R>({
                       column.toggleVisibility(!!value)
                     }
                   >
+                    {headerText}
                   </DropdownMenuCheckboxItem>
                 );
               })}
