@@ -518,7 +518,7 @@ export default function ProjectsPage() {
                                     <SearchableSelect
                                       options={institutions.map((inst) => ({
                                         label: inst.name,
-                                        value: inst.id,
+                                        value: inst.id || 0,
                                       }))}
                                       value={field.value || 0}
                                       onChange={(value) =>
