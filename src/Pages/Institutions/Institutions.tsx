@@ -50,7 +50,6 @@ export default function Institutions() {
   const form = useForm<z.infer<typeof InstitutionSchema>>({
     resolver: zodResolver(InstitutionSchema),
     defaultValues: {
-      id: 0,
       name: "",
       email: "",
       address: "",
@@ -84,7 +83,7 @@ export default function Institutions() {
       district_id: number,
       address: string | null,
       phone: string | null,
-      departament_id: number
+      departament_id: number,
     ) => {
       setOpen(true);
       setActiveEdit(true);
@@ -99,7 +98,7 @@ export default function Institutions() {
         departament_id: departament_id ?? undefined,
       });
     },
-    [form, setOpen, setActiveEdit]
+    [form, setOpen, setActiveEdit],
   );
 
   const columns: ColumnDef<InstitutionType>[] = [
@@ -172,13 +171,13 @@ export default function Institutions() {
               const departament_id = row.original.district?.departament_id ?? 0;
 
               editInstitution(
-                row.original.id,
+                row.original.id ?? 0,
                 row.original.name,
                 row.original.email ?? "",
                 district_id,
                 row.original.address ?? "",
                 row.original.phone ?? "",
-                departament_id
+                departament_id,
               );
             }}
           >
@@ -188,7 +187,7 @@ export default function Institutions() {
             variant="ghost"
             size="icon"
             className="cursor-pointer hover:bg-muted"
-            onClick={() => openDialogDelete(row.original.id)}
+            onClick={() => openDialogDelete(row.original.id ?? 0)}
           >
             <Trash2 className="w-4 h-4 text-red-600" />
           </Button>
@@ -301,19 +300,21 @@ export default function Institutions() {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(insertInstitution)}>
                 <div className="space-y-8 py-4">
-                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                    <div className="flex flex-col">
-                      <FormTextField
-                        formField={form}
-                        type="number"
-                        nameField="id"
-                        label="ID"
-                        placeholder="Generado automáticamente"
-                        readOnly={true} // Siempre readonly, usualmente es autoincremental
-                        className="bg-muted cursor-not-allowed"
-                      />
+                  {activeEdit && (
+                    <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                      <div className="flex flex-col">
+                        <FormTextField
+                          formField={form}
+                          type="number"
+                          nameField="id"
+                          label="ID"
+                          placeholder="Generado automáticamente"
+                          readOnly={true} // Siempre readonly, usualmente es autoincremental
+                          className="bg-muted cursor-not-allowed"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                     <div className="flex flex-col">
                       <FormTextField
@@ -356,7 +357,7 @@ export default function Institutions() {
                           (district) => ({
                             key: district.id.toString(),
                             textRender: district.name,
-                          })
+                          }),
                         )}
                       />
                     </div>

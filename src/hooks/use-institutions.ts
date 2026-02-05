@@ -34,13 +34,12 @@ export const useInstitutions = () => {
   };
 
   const insertInstitution = async (data: z.infer<typeof InstitutionSchema>) => {
-
     setLoading(true);
     try {
       // Preparamos el payload limpiando strings vacíos si es necesario
       // Si data.email es "", lo convertimos a null o undefined para que la BD no se queje si es Unique
       const payload = {
-        id: data.id,
+        ...(activeEdit ? { id: data.id } : {}),
         name: data.name,
         email: data.email || "",
         address: data.address || undefined,

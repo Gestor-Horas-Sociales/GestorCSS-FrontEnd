@@ -2,7 +2,7 @@ import type { District } from "./DistrictType";
 import { z } from "zod";
 
 export interface InstitutionType {
-  id: number;
+  id?: number;
   name: string;
   // CAMBIOS: Ahora pueden ser null o undefined
   address?: string | null;
@@ -18,7 +18,7 @@ export interface InstitutionType {
 }
 
 export type InstitutionPayload = {
-  id: number;
+  id?: number;
   name: string;
   email: string;
   district_id?: number;
@@ -28,7 +28,7 @@ export type InstitutionPayload = {
 };
 
 export const InstitutionSchema = z.object({
-  id: z.number({ message: "ID es requerido" }),
+  id: z.number().optional(),
   name: z.string().nonempty({ message: "Nombre es requerido" }),
   address: z.string().optional(),
   email: z.string().email("Correo inválido").optional().or(z.literal("")),
