@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useMemo } from "react";
@@ -69,8 +70,7 @@ const COLORS = [
   "#ec4899", // Rosa
 ];
 
-// --- COMPONENTE TOOLTIP ---
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// --- TOOLTIP 1: PARA DEPARTAMENTOS (Existente) ---
 const CustomTooltipBar = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
@@ -89,8 +89,30 @@ const CustomTooltipBar = ({ active, payload, label }: any) => {
   return null;
 };
 
+// --- TOOLTIP 2: PARA CARRERAS (NUEVO - Texto Negro y Legible) ---
+const CustomTooltipCarrera = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      // Fondo blanco forzado y texto gris oscuro/negro para máxima legibilidad
+      <div className="bg-white border border-slate-200 p-3 rounded-lg shadow-xl z-50 min-w-[200px]">
+        <p className="font-bold text-slate-900 mb-2 border-b pb-1">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <div key={index} className="flex justify-between items-center gap-4 mb-1">
+            <span className="text-sm font-medium" style={{ color: entry.color }}>
+              {entry.name}:
+            </span>
+            <span className="text-sm font-bold text-slate-700">
+              {entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function ReportsPage() {
-  // 1. AÑO ACTUAL POR DEFECTO
   const currentYear = new Date().getFullYear();
   const [selectedPeriod, setSelectedPeriod] = useState(currentYear.toString());
 
@@ -112,44 +134,76 @@ export default function ReportsPage() {
     return Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
   }, [currentYear]);
 
-  // --- MÉTRICAS GENERALES ---
-  const totalProyectos = projects?.length || 0;
-  const totalInstituciones = institutions?.length || 0;
+  // --- LÓGICA DE FECHAS (Backend Logic) ---
+  const dateRange = useMemo(() => {
+    const reportYear = Number(selectedPeriod);
+    let startDate: Date, endDate: Date;
 
-  // --- LÓGICA DE DATOS PARA GRÁFICOS ---
+    switch (reportYear) {
+      case 2025:
+        startDate = new Date("2025-01-01T00:00:00.000Z");
+        endDate = new Date("2026-01-31T23:59:59.999Z");
+        break;
+      case 2026:
+        startDate = new Date("2026-02-01T00:00:00.000Z");
+        endDate = new Date("2026-12-31T23:59:59.999Z");
+        break;
+      default:
+        startDate = new Date(`${reportYear}-01-01T00:00:00.000Z`);
+        endDate = new Date(`${reportYear}-12-31T23:59:59.999Z`);
+        break;
+    }
+    return { startDate, endDate };
+  }, [selectedPeriod]);
 
-  // 1. Aplanar asignaciones (Necesario para tu código)
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const allAssignments = useMemo(() => {
-    if (!projects) return [];
-    const listaPlana: any[] = [];
+  // --- FILTRADO DE DATA BASE ---
+  const { filteredProjects, filteredAssignments } = useMemo(() => {
+    if (!projects) return { filteredProjects: [], filteredAssignments: [] };
+
+    const fProjects = projects.filter((p) => {
+      if (!p.start_date) return false;
+      const d = new Date(p.start_date);
+      return d >= dateRange.startDate && d <= dateRange.endDate;
+    });
+
+    const validProjectIds = new Set(fProjects.map((p) => String(p.id)));
+
+    const fAssignments: any[] = [];
     projects.forEach((proyecto) => {
-      if (proyecto.assignments && Array.isArray(proyecto.assignments)) {
-        proyecto.assignments.forEach((assign: any) => {
-          listaPlana.push({
-            student_id: assign.student_id ?? assign.studentId,
-            project_id: proyecto.id,
-            ...assign,
+      if (validProjectIds.has(String(proyecto.id))) {
+        if (proyecto.assignments && Array.isArray(proyecto.assignments)) {
+          proyecto.assignments.forEach((assign: any) => {
+            fAssignments.push({
+              student_id: assign.student_id ?? assign.studentId,
+              project_id: proyecto.id,
+              ...assign,
+            });
           });
-        });
+        }
       }
     });
-    return listaPlana;
-  }, [projects]);
 
-  // 2. Proyectos por Departamento (TU CÓDIGO REPLICADO EXACTAMENTE)
+    return { filteredProjects: fProjects, filteredAssignments: fAssignments };
+  }, [projects, dateRange]);
+
+  // --- MÉTRICAS GENERALES ---
+  const totalProyectos = filteredProjects.length;
+  const totalInstituciones = institutions?.length || 0;
+
+  // --- DATOS GRÁFICOS ---
+
+  // 1. Proyectos por Departamento
   const dataPorDepto = useMemo(() => {
     return (
       departaments?.map((depto) => {
-        const proyectosEnDepto =
-          projects?.filter((p: any) => {
+        const proyectosEnDepto = filteredProjects.filter((p: any) => {
             if (p.district?.departament_id)
               return String(p.district.departament_id) === String(depto.id);
             return false;
           }) || [];
 
         const idsProyectosDepto = new Set(proyectosEnDepto.map((p) => p.id));
-        const estudiantesAtendidos = allAssignments.filter((a) =>
+        const estudiantesAtendidos = filteredAssignments.filter((a) =>
           idsProyectosDepto.has(a.project_id)
         ).length;
 
@@ -160,13 +214,12 @@ export default function ReportsPage() {
         };
       }) || []
     )
-      // Agrego estos filtros para que el gráfico no muestre espacios vacíos
       .filter((d) => d.proyectos > 0)
       .sort((a, b) => b.proyectos - a.proyectos);
-  }, [departaments, projects, allAssignments]);
+  }, [departaments, filteredProjects, filteredAssignments]);
 
-  // 3. Estudiantes por Año Académico
-  const dataPorAno = [1, 2, 3, 4, 5].map((year) => ({
+  // 2. Estudiantes por Año
+  const dataPorAno = useMemo(() => [1, 2, 3, 4, 5].map((year) => ({
     año: `${year}° Año`,
     total: estudiantes?.filter((e) => e.career_year === year).length || 0,
     completados:
@@ -176,59 +229,108 @@ export default function ReportsPage() {
           (Number(e.external_hours) || 0) + (Number(e.internal_hours) || 0) >=
             600
       ).length || 0,
-  }));
+  })), [estudiantes]);
 
-  // 4. Progreso por Carrera
-  const dataPorCarrera =
-    carreras?.map((carrera) => {
-      const studentsInCareer =
-        estudiantes?.filter((e) => e.career?.id === carrera.id) || [];
-      const completedInCareer = studentsInCareer.filter(
-        (s) =>
-          (Number(s.external_hours) || 0) + (Number(s.internal_hours) || 0) >=
-          600
-      ).length;
+  // 3. Progreso por Carrera (LÓGICA BACKEND)
+  const dataPorCarrera = useMemo(() => {
+    if (!carreras || !estudiantes || !filteredProjects) return [];
 
-      const rawPercentage =
-        studentsInCareer.length > 0
-          ? (completedInCareer / studentsInCareer.length) * 100
-          : 0;
+    const projectCareersMap = new Map<string, Set<string>>();
+
+    filteredAssignments.forEach((assign) => {
+      const studentId = assign.student_id ?? assign.studentId;
+      const projectId = String(assign.project_id ?? assign.projectId);
+      const student = estudiantes.find(
+        (e) => String(e.id) === String(studentId)
+      );
+
+      if (student) {
+        const careerId = student.career?.id;
+        if (careerId) {
+          const careerIdStr = String(careerId);
+          if (!projectCareersMap.has(projectId)) {
+            projectCareersMap.set(projectId, new Set());
+          }
+          projectCareersMap.get(projectId)?.add(careerIdStr);
+        }
+      }
+    });
+
+    return carreras.map((carrera) => {
+      const carreraIdStr = String(carrera.id);
+      const idsEstudiantesDeCarrera = new Set();
+      
+      estudiantes.forEach((e) => {
+        const idCarreraEstudiante = e.career?.id;
+        if (String(idCarreraEstudiante) === carreraIdStr) {
+          idsEstudiantesDeCarrera.add(String(e.id));
+        }
+      });
+
+      let totalParticipaciones = 0;
+      filteredAssignments.forEach((a) => {
+        const idEstudianteAsignado = a.student_id ?? a.studentId;
+        if (
+          idEstudianteAsignado &&
+          idsEstudiantesDeCarrera.has(String(idEstudianteAsignado))
+        ) {
+          totalParticipaciones++;
+        }
+      });
+
+      const proyectosCount = filteredProjects.filter((p) => {
+        const pId = String(p.id);
+        const careersInProject = projectCareersMap.get(pId);
+        if (careersInProject) {
+          return careersInProject.has(carreraIdStr);
+        }
+        return false;
+      }).length;
+
+      const activeStudentsInPeriod = Array.from(idsEstudiantesDeCarrera).filter(sId => 
+         filteredAssignments.some((a:any) => String(a.student_id || a.studentId) === String(sId))
+      );
+      
+      const uniqueActiveCount = activeStudentsInPeriod.length;
+
+      const completedCount = activeStudentsInPeriod.filter(sId => {
+         const s = estudiantes.find(e => String(e.id) === String(sId));
+         if(!s) return false;
+         return (Number(s.external_hours) || 0) + (Number(s.internal_hours) || 0) >= 600;
+      }).length;
+
+      const percentage = uniqueActiveCount > 0 
+        ? ((completedCount / uniqueActiveCount) * 100).toFixed(1) 
+        : "0.0";
 
       return {
         carrera: carrera.name,
-        estudiantes: studentsInCareer.length,
-        completados: completedInCareer,
-        porcentaje: rawPercentage.toFixed(1),
+        estudiantes: totalParticipaciones,
+        proyectos: proyectosCount,
+        completados: completedCount,
+        porcentaje: percentage
       };
-    }) || [];
+    });
+  }, [carreras, filteredProjects, estudiantes, filteredAssignments]);
 
-  // Opciones Combobox
-  const studentOptions = useMemo(
-    () =>
-      estudiantes?.map((est) => ({
-        value: String(est.id),
-        label: `${est.student_id_card} - ${est.name} ${est.lastname}`,
-      })) || [],
-    [estudiantes]
-  );
+  // Opciones
+  const studentOptions = useMemo(() => 
+    estudiantes?.map((est) => ({
+      value: String(est.id),
+      label: `${est.student_id_card} - ${est.name} ${est.lastname}`,
+    })) || [], [estudiantes]);
 
-  const projectOptions = useMemo(
-    () =>
-      projects?.map((proj) => ({
-        value: String(proj.id),
-        label: proj.name,
-      })) || [],
-    [projects]
-  );
+  const projectOptions = useMemo(() => 
+    projects?.map((proj) => ({
+      value: String(proj.id),
+      label: proj.name,
+    })) || [], [projects]);
 
-  const careerOptions = useMemo(
-    () =>
-      carreras?.map((car) => ({
-        value: String(car.id),
-        label: car.name,
-      })) || [],
-    [carreras]
-  );
+  const careerOptions = useMemo(() => 
+    carreras?.map((car) => ({
+      value: String(car.id),
+      label: car.name,
+    })) || [], [carreras]);
 
   // Manejadores
   const handleDownloadAnnual = async () => {
@@ -297,7 +399,6 @@ export default function ReportsPage() {
 
         {/* 1. SECCIÓN DE REPORTERÍA */}
         <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
-          {/* Memoria Anual */}
           <ReportGeneratorCard
             title="Reporte Anual"
             desc={`Reporte Global ${selectedPeriod}`}
@@ -314,7 +415,6 @@ export default function ReportsPage() {
             </div>
           </ReportGeneratorCard>
 
-          {/* Individual */}
           <ReportGeneratorCard
             title="Individual"
             desc="Por estudiante"
@@ -329,12 +429,11 @@ export default function ReportsPage() {
               value={selectedStudentId}
               onChange={setSelectedStudentId}
               placeholder="Buscar estudiante..."
-              searchPlaceholder="Nombre..."
+              searchPlaceholder="Carnet o nombre..."
               emptyText="Sin resultados."
             />
           </ReportGeneratorCard>
 
-          {/* Por Proyecto */}
           <ReportGeneratorCard
             title="Por Proyecto"
             desc="Detalle específico"
@@ -354,7 +453,6 @@ export default function ReportsPage() {
             />
           </ReportGeneratorCard>
 
-          {/* Por Carrera */}
           <ReportGeneratorCard
             title="Por Carrera"
             desc="Estadísticas de área"
@@ -378,14 +476,14 @@ export default function ReportsPage() {
         {/* 2. KPIs (RESUMEN EJECUTIVO) */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
           <KpiCard
-            title="Total Estudiantes"
-            value={allAssignments?.length || 0}
+            title="Asignaciones"
+            value={filteredAssignments.length}
             icon={Users}
             color="text-blue-600"
             bg="bg-blue-100 dark:bg-blue-900/20"
           />
           <KpiCard
-            title="Total Proyectos"
+            title="Proyectos"
             value={totalProyectos}
             icon={Activity}
             color="text-green-600"
@@ -407,7 +505,7 @@ export default function ReportsPage() {
             <CardHeader>
               <CardTitle>Rendimiento por Carrera</CardTitle>
               <CardDescription>
-                Estudiantes totales vs. Horas completadas (600h)
+                Participaciones en {selectedPeriod} vs. Completados
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -424,24 +522,26 @@ export default function ReportsPage() {
                     type="category"
                     scale="band"
                     width={100}
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
                     interval={0}
                   />
+                  {/* AQUÍ ESTÁ EL TOOLTIP PERSONALIZADO */}
                   <Tooltip
+                    content={<CustomTooltipCarrera />}
                     cursor={{ fill: "transparent" }}
-                    contentStyle={{ borderRadius: "8px" }}
                   />
-                  <Legend wrapperStyle={{ fontSize: "12px" }} />
+                  <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />
                   <Bar
                     dataKey="estudiantes"
                     name="Inscritos"
                     barSize={20}
-                    fill="#e2e8f0"
+                    fill="#f59e0b"
                     radius={[0, 4, 4, 0]}
                     label={{
                       position: "right",
-                      fill: "#94a3b8",
+                      fill: "#f59e0b",
                       fontSize: 12,
+                      fontWeight: 600,
                     }}
                   />
                   <Bar
@@ -454,6 +554,7 @@ export default function ReportsPage() {
                       position: "right",
                       fill: "#3b82f6",
                       fontSize: 12,
+                      fontWeight: 600,
                     }}
                   />
                 </ComposedChart>
@@ -510,7 +611,7 @@ export default function ReportsPage() {
           </Card>
         </div>
 
-        {/* 4. GRÁFICO DE DEPARTAMENTOS (REPLICADO) */}
+        {/* 4. GRÁFICO DE DEPARTAMENTOS */}
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
           <Card className="flex flex-col min-w-0">
             <CardHeader>

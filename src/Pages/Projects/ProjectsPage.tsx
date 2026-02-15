@@ -233,7 +233,8 @@ export default function ProjectsPage() {
   const columns: ColumnDef<ProjectType>[] = useMemo(
     () => [
       {
-        accessorKey: "name",
+        id: "name",
+        accessorFn: (row) => `${row.name} ${row.institution?.name || ""}`,
         header: "Proyecto",
         cell: ({ row }) => (
           <div className="min-w-[150px]">
