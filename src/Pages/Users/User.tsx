@@ -29,8 +29,7 @@ import FormPasswordField from "@/components/FormPasswordField";
 
 const INITIAL_VALUES_ROLE = [
   { id: 1, name: "Administrador" },
-  { id: 2, name: "Estudiante" },
-  { id: 3, name: "Coordinador" },
+  { id: 2, name: "Coordinador" },
 ];
 
 export default function User() {
@@ -49,22 +48,19 @@ export default function User() {
   const [idDelete, setIdDelete] = useState(0);
 
   type UserFormValues =
-  | z.infer<typeof CreateUserSchema>
-  | z.infer<typeof UpdateUserSchema>;
-
+    | z.infer<typeof CreateUserSchema>
+    | z.infer<typeof UpdateUserSchema>;
 
   const form = useForm<UserFormValues>({
-  resolver: zodResolver(
-    activeEdit ? UpdateUserSchema : CreateUserSchema
-  ),
-  defaultValues: {
-    name: "",
-    lastname: "",
-    email: "",
-    password: "",
-    role: undefined,
-  },
-});
+    resolver: zodResolver(activeEdit ? UpdateUserSchema : CreateUserSchema),
+    defaultValues: {
+      name: "",
+      lastname: "",
+      email: "",
+      password: "",
+      role: undefined,
+    },
+  });
 
   const openDialogDelete = useCallback((id: number) => {
     setOpenAlertDelete(true);
@@ -77,7 +73,7 @@ export default function User() {
       name: string,
       lastname: string,
       email: string,
-      role: number
+      role: number,
     ) => {
       form.reset({
         id,
@@ -90,7 +86,7 @@ export default function User() {
       setActiveEdit(true);
       setOpen(true);
     },
-    [form, setActiveEdit, setOpen]
+    [form, setActiveEdit, setOpen],
   );
 
   const columns: ColumnDef<UserPayload>[] = [
@@ -146,7 +142,7 @@ export default function User() {
                 row.original.name,
                 row.original.lastname,
                 row.original.email,
-                row.original.role?.id || 0
+                row.original.role?.id || 0,
               );
             }}
           >

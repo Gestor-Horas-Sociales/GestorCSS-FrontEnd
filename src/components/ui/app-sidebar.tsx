@@ -95,12 +95,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     switch (user.role) {
       case 1:
         return data.navMain;
-      case 3:
-        return data.navMain.filter((item) => item.url !== "/settings");
       case 2:
-        return data.navMain.filter((item) =>
-          ["/dashboard", "/hours", "/projects"].includes(item.url)
-        );
+        return data.navMain.filter((item) => item.url !== "/users");
       default:
         return [];
     }

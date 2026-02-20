@@ -36,20 +36,17 @@ type role = {
 
 export const UserBaseSchema = z.object({
   id: z.number().optional(),
-  name: z.string().nonempty("Nombre es requerido"),
-  lastname: z.string().nonempty("Apellido es requerido"),
+  name: z.string().min(1, "Nombre es requerido"),
+  lastname: z.string().min(1, "Apellido es requerido"),
   email: z.string().email("Correo inválido"),
-  password: z
-    .string()
-    .min(8, "Mínimo 8 caracteres")
-    .regex(/[A-Z]/, "Debe tener una mayúscula")
-    .regex(/[0-9]/, "Debe tener un número")
-    .optional(),
-  role: z.number(),
+  role: z.number({
+    required_error: "Rol es requerido",
+  }),
+  password: z.string().optional().or(z.literal("")),
 });
 
 export const CreateUserSchema = UserBaseSchema.extend({
-    password: z
+  password: z
     .string({
       required_error: "Contraseña es requerida",
     })
@@ -58,4 +55,18 @@ export const CreateUserSchema = UserBaseSchema.extend({
     .regex(/[0-9]/, "Debe tener un número"),
 });
 
-export const UpdateUserSchema = UserBaseSchema; // password opcional
+export const UpdateUserSchema = UserBaseSchema.extend({
+  password: z
+    .string()
+    .refine((val) => val === "" || val.length >= 8, {
+      message: "Mínimo 8 caracteres",
+    })
+    .refine((val) => val === "" || /[A-Z]/.test(val), {
+      message: "Debe tener una mayúscula",
+    })
+    .refine((val) => val === "" || /[0-9]/.test(val), {
+      message: "Debe tener un número",
+    })
+    .optional()
+    .or(z.literal("")),
+});
