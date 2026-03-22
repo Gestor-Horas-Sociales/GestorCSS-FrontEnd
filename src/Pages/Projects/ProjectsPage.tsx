@@ -640,9 +640,12 @@ export default function ProjectsPage() {
                                   <SearchableSelect
                                     options={carreras.map((c) => ({
                                       label: c.name,
-                                      value: c.id,
+                                      // Aquí está la magia: convertimos el ID a string
+                                      value: c.id.toString(),
                                     }))}
-                                    value={field.value || "0"}
+                                    value={
+                                      field.value ? field.value.toString() : "0"
+                                    }
                                     onChange={(value) =>
                                       field.onChange(value.toString())
                                     }
