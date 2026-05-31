@@ -11,4 +11,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Agrega esta sección para solucionar el error de MSAL Popup
+  server: {
+    headers: {
+      // Permite que la ventana principal monitoree la popup de login
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+      // Opcional: A veces necesario para mantener el contexto seguro
+      "Cross-Origin-Embedder-Policy": "unsafe-none" 
+    },
+  },
 })

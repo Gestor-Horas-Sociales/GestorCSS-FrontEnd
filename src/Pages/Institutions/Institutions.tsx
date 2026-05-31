@@ -1,0 +1,421 @@
+import { Button } from "@/components/ui/button";
+import { Plus, Target, Trash2, FilePenLine } from "lucide-react";
+import { useInstitutions } from "@/hooks/use-institutions";
+import Spinner from "@/components/Spinner";
+import type { ColumnDef } from "@tanstack/react-table";
+import type { InstitutionType } from "@/Types/InstitutionType";
+import { InstitutionSchema } from "@/Types/InstitutionType";
+import { useTable } from "@/hooks/useTable";
+import TableStructure from "@/components/TableStructure";
+// Nota: Ya no necesitamos importar Card, CardContent, etc. porque usaremos un diseño custom más ligero
+import GeneralAlert from "@/components/GeneralAlert";
+import { useCallback, useState, useEffect } from "react";
+import { Toaster } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form } from "@/components/ui/form";
+import FormTextField from "@/components/FormTextField";
+import { useDepartament } from "@/hooks/use-departament";
+import FormSelectField from "@/components/FormSelectField";
+import { z } from "zod";
+import { useDistrict } from "@/hooks/use-district";
+import { Badge } from "@/components/ui/badge";
+
+export default function Institutions() {
+  const {
+    institutions,
+    loading,
+    handleDeleteInstitution,
+    open,
+    setOpen,
+    activeEdit,
+    setActiveEdit,
+    insertInstitution,
+  } = useInstitutions();
+
+  const { departaments } = useDepartament();
+  const { departamentsDistrict, getAllDepartamentsByDistrict } = useDistrict();
+
+  const [openAlertDelete, setOpenAlertDelete] = useState(false);
+  const [idDelete, setIdDelete] = useState<number>(0);
+  const [idDepartament, setIdDepartment] = useState<number>(0);
+
+  const form = useForm<z.infer<typeof InstitutionSchema>>({
+    resolver: zodResolver(InstitutionSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      address: "",
+      phone: "",
+    },
+  });
+
+  useEffect(() => {
+    if (idDepartament) {
+      getAllDepartamentsByDistrict(idDepartament);
+    }
+  }, [idDepartament, getAllDepartamentsByDistrict]);
+
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      setIdDepartment(value.departament_id ?? 0);
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  const openDialogDelete = useCallback((id: number) => {
+    setOpenAlertDelete(true);
+    setIdDelete(id);
+  }, []);
+
+  const editInstitution = useCallback(
+    (
+      id: number,
+      name: string,
+      email: string | null,
+      district_id: number,
+      address: string | null,
+      phone: string | null,
+      departament_id: number,
+    ) => {
+      setOpen(true);
+      setActiveEdit(true);
+
+      form.reset({
+        id: id ?? 0,
+        name: name ?? "",
+        email: email ?? "",
+        district_id: district_id ?? undefined,
+        address: address ?? "",
+        phone: phone ?? "",
+        departament_id: departament_id ?? undefined,
+      });
+    },
+    [form, setOpen, setActiveEdit],
+  );
+
+  const columns: ColumnDef<InstitutionType>[] = [
+    {
+      accessorKey: "id",
+      header: "ID",
+      meta: {
+        label: "ID",
+      },
+    },
+    {
+      accessorKey: "name",
+      header: "Nombre",
+      meta: {
+        label: "Nombre",
+      },
+    },
+    {
+      accessorKey: "projectsCount",
+      header: "Proyectos",
+      meta: {
+        label: "Proyectos",
+      },
+      cell: ({ row }) => (
+        <Badge variant="outline">{row.original.projectsCount}</Badge>
+      ),
+    },
+    {
+      accessorKey: "studentsCount",
+      header: "Estudiantes",
+      meta: {
+        label: "Estudiantes",
+      },
+      cell: ({ row }) => (
+        <Badge variant="outline">{row.original.studentsCount}</Badge>
+      ),
+    },
+    {
+      accessorKey: "district.name",
+      header: "Distrito",
+      meta: {
+        label: "Distrito",
+      },
+    },
+    {
+      accessorKey: "phone",
+      header: "Teléfono",
+      meta: {
+        label: "Teléfono",
+      },
+    },
+    {
+      accessorKey: "address",
+      header: "Dirección",
+      meta: {
+        label: "Dirección",
+      },
+    },
+    {
+      accessorKey: "acciones",
+      header: "Acciones",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="cursor-pointer hover:bg-muted"
+            onClick={() => {
+              const district_id = row.original.district?.id ?? 0;
+              const departament_id = row.original.district?.departament_id ?? 0;
+
+              editInstitution(
+                row.original.id ?? 0,
+                row.original.name,
+                row.original.email ?? "",
+                district_id,
+                row.original.address ?? "",
+                row.original.phone ?? "",
+                departament_id,
+              );
+            }}
+          >
+            <FilePenLine className="w-4 h-4 text-blue-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="cursor-pointer hover:bg-muted"
+            onClick={() => openDialogDelete(row.original.id ?? 0)}
+          >
+            <Trash2 className="w-4 h-4 text-red-600" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const { globalFilter, setGlobalFilter, table } = useTable({
+    data: institutions,
+    columns,
+  });
+
+  const cancelDelete = () => {
+    setOpenAlertDelete(false);
+    setIdDelete(0);
+  };
+
+  const confirmDelete = async () => {
+    await handleDeleteInstitution(idDelete);
+    setOpenAlertDelete(false);
+    setIdDelete(0);
+  };
+
+  return (
+    <>
+      {loading && <Spinner />}
+      <div className="p-6 space-y-6">
+        {/* HEADER RE-DISEÑADO COMPACTO */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between border-b pb-4">
+          {/* IZQUIERDA: Título */}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Gestión de Instituciones
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Administrar las instituciones de la plataforma.
+            </p>
+          </div>
+
+          {/* DERECHA: Métricas y Botón */}
+          <div className="flex items-center gap-4">
+            {/* Mini Card de Métricas (Horizontal) */}
+            <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-muted/30 rounded-lg border">
+              <div className="p-2 bg-background rounded-full shadow-sm">
+                <Target className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Cantidad total de instituciones
+                </span>
+                <span className="text-xl font-bold leading-none">
+                  {institutions?.length || 0}
+                </span>
+              </div>
+            </div>
+
+            {/* Botón Principal */}
+            <Button
+              className="h-10 px-4 shadow-sm cursor-pointer"
+              onClick={() => {
+                setOpen(true);
+                setActiveEdit(false);
+                form.reset({
+                  id: 0,
+                  name: "",
+                  email: "",
+                  address: "",
+                  phone: "",
+                  district_id: undefined,
+                  departament_id: undefined,
+                });
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva institución
+            </Button>
+          </div>
+        </div>
+
+        {/* DIALOGO / MODAL */}
+        <Dialog
+          open={open}
+          onOpenChange={(isOpen) => {
+            setOpen(isOpen);
+            if (!isOpen) {
+              setActiveEdit(false);
+              form.reset({
+                id: 0,
+                name: "",
+                email: "",
+                address: "",
+                phone: "",
+              });
+            }
+          }}
+        >
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>
+                {activeEdit ? "Editar Institución" : "Nueva Institución"}
+              </DialogTitle>
+              <DialogDescription>
+                {activeEdit
+                  ? "Editar los detalles de la institución."
+                  : "Ingrese los detalles de la nueva institución."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(insertInstitution)}>
+                <div className="space-y-8 py-4">
+                  {activeEdit && (
+                    <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                      <div className="flex flex-col">
+                        <FormTextField
+                          formField={form}
+                          type="number"
+                          nameField="id"
+                          label="ID"
+                          placeholder="Generado automáticamente"
+                          readOnly={true} // Siempre readonly, usualmente es autoincremental
+                          className="bg-muted cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <div className="flex flex-col">
+                      <FormTextField
+                        formField={form}
+                        nameField="name"
+                        label="Nombre"
+                        placeholder="Ingrese el nombre de la institución"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <FormTextField
+                        formField={form}
+                        nameField="email"
+                        label="Correo electrónico (opcional)"
+                        placeholder="Ingrese correo electrónico"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <div className="flex flex-col">
+                      <FormSelectField
+                        formField={form}
+                        nameField="departament_id"
+                        label="Departamento (opcional)"
+                        placeholder="Seleccione departamento"
+                        listRender={departaments.map((departament) => ({
+                          key: departament.id.toString(),
+                          textRender: departament.name,
+                        }))}
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <FormSelectField
+                        formField={form}
+                        disabled={idDepartament === 0}
+                        nameField="district_id"
+                        label="Distrito (opcional)"
+                        placeholder="Seleccione distrito"
+                        listRender={(departamentsDistrict ?? []).map(
+                          (district) => ({
+                            key: district.id.toString(),
+                            textRender: district.name,
+                          }),
+                        )}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <div className="flex flex-col">
+                      <FormTextField
+                        formField={form}
+                        nameField="address"
+                        label="Dirección (opcional)"
+                        placeholder="Ingrese la dirección de la institución"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <FormTextField
+                        formField={form}
+                        nameField="phone"
+                        label="Teléfono (opcional)"
+                        placeholder="Ingrese el teléfono de la institución"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="w-full flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => setOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    {activeEdit ? "Guardar cambios" : "Crear Institución"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        <TableStructure
+          globalFilter={globalFilter}
+          setGlobalFilter={setGlobalFilter}
+          columns={columns}
+          table={table}
+        />
+      </div>
+
+      <GeneralAlert
+        title="¿Estás seguro de eliminar esta institución?"
+        description="Esta acción no se puede deshacer y podría afectar proyectos asociados."
+        openAlert={openAlertDelete}
+        setOpenAlert={setOpenAlertDelete}
+        confirmText="Sí, eliminar"
+        onConfirm={() => confirmDelete()}
+        onCancel={() => cancelDelete()}
+      />
+      <Toaster position="top-right" />
+    </>
+  );
+}
