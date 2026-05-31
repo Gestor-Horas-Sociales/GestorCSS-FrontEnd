@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import Institutions from "@/Pages/Institutions/Institutions";
 import Spinner from "@/components/Spinner";
 import User from "@/Pages/Users/User";
+import Map from "@/Pages/Map/Page";
 
 const Navigation = () => {
   const { initializeAuth, isAuthenticated, isLoading } = useAuthStore();
@@ -34,6 +35,7 @@ const Navigation = () => {
               { path: "hours/*", element: <HoursPage /> },
               { path: "reports/*", element: <ReportsPage /> },
               { path: "users/*", element: <User /> },
+              { path: "map/*", element: <Map /> },
               { path: "*", element: <Navigate to="/dashboard" replace /> },
             ],
           },

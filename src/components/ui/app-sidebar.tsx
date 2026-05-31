@@ -81,6 +81,11 @@ const data = {
       title: "Gestión de Usuarios",
       url: "/users",
       icon: BookUser,
+    },
+    {
+      title: "Mapa de Proyectos",
+      url: "/map",
+      icon: Command,
     }
   ],
 };
