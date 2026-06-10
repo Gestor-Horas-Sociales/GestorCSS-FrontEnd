@@ -3,6 +3,7 @@ import type {
   ProjectType,
   ProjectSchemaType,
 } from "@/Types/ProyectType";
+import type { MapProject, ProjectMapDetails } from "@/Types/MapType";
 
 // 1. OBTENER TODOS
 // Usamos el genérico <{ data: ProjectType[] }> para mayor seguridad
@@ -33,3 +34,17 @@ export const updateProject = (id: number, data: Partial<ProjectSchemaType>) => {
 // 5. ELIMINAR
 export const deleteProject = (id: number) =>
   api.delete<{ message: string }>(`/projects/${id}`);
+
+// 6. PROYECTOS PARA EL MAPA (con coordenadas y métricas básicas)
+export const getProjectsMap = async () => {
+  const response = await api.get<{ data: MapProject[] }>("/projects/map");
+  return response.data.data;
+};
+
+// 7. MÉTRICAS DE UN PROYECTO PARA EL MAPA
+export const getProjectMapDetails = async (id: number) => {
+  const response = await api.get<{ data: ProjectMapDetails }>(
+    `/projects/${id}/map-details`
+  );
+  return response.data.data;
+};

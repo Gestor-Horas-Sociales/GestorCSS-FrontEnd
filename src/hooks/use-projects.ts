@@ -98,6 +98,7 @@ export const useProjects = () => {
 
 
         district_id: data.district_id ? Number(data.district_id) : undefined,
+        canton_id: data.canton_id ? Number(data.canton_id) : undefined,
 
         start_date: data.start_date,
         end_date: data.end_date, // Puede ser null

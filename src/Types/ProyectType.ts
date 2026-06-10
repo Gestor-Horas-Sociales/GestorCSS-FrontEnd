@@ -42,6 +42,7 @@ export const ProjectSchema = z.object({
     .min(0, { message: "Número de beneficiarios inválido" }),
   department_id: z.number().int().optional(),
   district_id: z.coerce.number().int().optional().nullable(),
+  canton_id: z.coerce.number().int().optional().nullable(),
   start_date: z.string().min(1, { message: "Fecha de inicio es requerida" }),
   end_date: z.string().optional().nullable(),
   active: z.boolean(),
@@ -82,6 +83,9 @@ export interface ProjectType {
   number_beneficiaries: number;
   department_id?: number | DepartamentoType;
   district_id?: number | District | null;
+  canton_id?: number | { id: number; name: string } | null;
+  latitude?: number | null;
+  longitude?: number | null;
   start_date: string;
   end_date?: string | null;
   active: boolean;
