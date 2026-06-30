@@ -28,6 +28,7 @@ import FormTextField from "@/components/FormTextField";
 import FormSelectField from "@/components/FormSelectField";
 import { useDepartament } from "@/hooks/use-departament";
 import { useDistrict } from "@/hooks/use-district";
+import { useCantons } from "@/hooks/use-cantons";
 import { useCarrera } from "@/hooks/use-carrera";
 import { useProjects } from "@/hooks/use-projects";
 // 1. Agregamos useCallback al import
@@ -49,7 +50,10 @@ export default function NuevoProyectoModal({
     useDistrict();
   const { carreras } = useCarrera();
   const { insertProject, getProjectDetails } = useProjects();
+  const { cantons, loadingCantons, getAllCantonsByDistrict, clearCantons } =
+    useCantons();
   const [idDepartament, setIdDepartment] = useState<number>(0);
+  const [idDistrict, setIdDistrict] = useState<number>(0);
   const [isEditing, setIsEditing] = useState(false);
 
   const form = useForm<ProjectSchemaType>({
@@ -67,6 +71,7 @@ export default function NuevoProyectoModal({
       number_beneficiaries: 1,
       department_id: 1,
       district_id: 1,
+      canton_id: null,
       start_date: new Date().toISOString().split("T")[0],
       end_date: new Date().toISOString().split("T")[0],
       active: true,
@@ -89,12 +94,14 @@ export default function NuevoProyectoModal({
       number_beneficiaries: 1,
       department_id: 1,
       district_id: 1,
+      canton_id: null,
       start_date: new Date().toISOString().split("T")[0],
       end_date: new Date().toISOString().split("T")[0],
       active: true,
       institution_id: 1,
     });
     setIdDepartment(0);
+    setIdDistrict(0);
   }, [form]);
 
   // 3. Definimos loadProjectData ANTES del useEffect y con useCallback
@@ -154,8 +161,20 @@ export default function NuevoProyectoModal({
         }
       }
 
-      // Set department to load districts
+      // Extract canton ID
+      let cantonId: number | null = null;
+      if (
+        typeof project.canton_id === "object" &&
+        project.canton_id !== null
+      ) {
+        cantonId = project.canton_id.id;
+      } else if (typeof project.canton_id === "number") {
+        cantonId = project.canton_id;
+      }
+
+      // Set department to load districts (and district to load cantons)
       setIdDepartment(departmentId);
+      setIdDistrict(districtId);
 
       setTimeout(() => {
         // Lógica segura para obtener el ID de la institución (número)
@@ -175,6 +194,7 @@ export default function NuevoProyectoModal({
           number_beneficiaries: project.number_beneficiaries || 1,
           department_id: departmentId,
           district_id: districtId,
+          canton_id: cantonId,
           start_date:
             typeof project.start_date === "string"
               ? project.start_date.split("T")[0]
@@ -213,14 +233,36 @@ export default function NuevoProyectoModal({
     }
   }, [idDepartament, getAllDepartamentsByDistrict]);
 
+  // Watch for district changes to load cantons
+  useEffect(() => {
+    if (idDistrict > 0) {
+      getAllCantonsByDistrict(idDistrict);
+    } else {
+      clearCantons();
+    }
+  }, [idDistrict, getAllCantonsByDistrict, clearCantons]);
+
+  // Si el cantón seleccionado no pertenece al distrito actual, limpiarlo
+  useEffect(() => {
+    if (loadingCantons) return;
+    const current = form.getValues("canton_id");
+    if (current && !cantons.some((c) => c.id === Number(current))) {
+      form.setValue("canton_id", null);
+    }
+  }, [cantons, loadingCantons, form]);
+
   useEffect(() => {
     const subscription = form.watch((value) => {
       if (value.department_id && value.department_id !== idDepartament) {
         setIdDepartment(value.department_id);
       }
+      const districtId = value.district_id ? Number(value.district_id) : 0;
+      if (districtId !== idDistrict) {
+        setIdDistrict(districtId);
+      }
     });
     return () => subscription.unsubscribe();
-  }, [form, idDepartament]);
+  }, [form, idDepartament, idDistrict]);
 
   const onSubmit = async (data: ProjectSchemaType) => {
     await insertProject(data);
@@ -384,6 +426,24 @@ export default function NuevoProyectoModal({
                     listRender={departamentsDistrict.map((district) => ({
                       key: district.id.toString(),
                       textRender: district.name,
+                    }))}
+                  />
+                </div>
+                <div>
+                  <FormSelectField
+                    formField={form}
+                    nameField="canton_id"
+                    label="Cantón (opcional)"
+                    placeholder={
+                      loadingCantons
+                        ? "Cargando cantones..."
+                        : "Seleccionar cantón"
+                    }
+                    disabled={idDistrict === 0 || cantons.length === 0}
+                    valueType="number"
+                    listRender={cantons.map((canton) => ({
+                      key: canton.id.toString(),
+                      textRender: canton.name,
                     }))}
                   />
                 </div>
