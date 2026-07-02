@@ -17,6 +17,12 @@ export interface CareerCount {
   count: number;
 }
 
+export interface StudentMapInfo {
+  id?: number;
+  name: string;
+  career: string;
+}
+
 export interface ProjectMapDetails {
   id: number;
   name: string;
@@ -33,4 +39,5 @@ export interface ProjectMapDetails {
   number_beneficiaries: number | null;
   careers: CareerCount[];
   genders: CareerCount[];
+  students?: StudentMapInfo[];
 }

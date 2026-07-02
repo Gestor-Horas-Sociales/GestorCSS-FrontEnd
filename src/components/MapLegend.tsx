@@ -50,7 +50,7 @@ export default function MapLegend({
           <p className="font-semibold text-foreground">Proyectos en el mapa</p>
           <p className="text-xs text-muted-foreground">
             {totalShown} de {totalAll} proyecto{totalAll !== 1 ? "s" : ""} ·{" "}
-            {totalStudents} estudiante{totalStudents !== 1 ? "s" : ""}
+            {totalStudents} estudiante{totalStudents !== 1 ? "s" : ""} atendido{totalStudents !== 1 ? "s" : ""}
           </p>
         </div>
         <span
